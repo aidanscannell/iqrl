@@ -1,7 +1,4 @@
 .DS_Store
-bnn-predictive/experiments/results/
-bnn-predictive/conda
-bnn-predictive/data/FMNIST
 .idea
 *.log
 .direnv
