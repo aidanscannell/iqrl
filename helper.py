@@ -31,7 +31,6 @@ def mlp(
     norm_after_act: bool = False,
 ):
     """
-    Basic building block of TD-MPC2.
     MLP with LayerNorm, Mish activations, and optionally dropout.
 
     Adapted from https://github.com/tdmpc2/tdmpc2-eval/blob/main/helper.py
