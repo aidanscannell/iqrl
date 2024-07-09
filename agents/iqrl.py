@@ -396,6 +396,7 @@ class iQRL(Agent):
             act_low=act_spec.low,
             act_high=act_spec.high,
         ).to(cfg.device)
+        self._pi = torch.compile(self._pi, mode="default") if cfg.compile else self._pi
         pi_tar = copy.deepcopy(self._pi).requires_grad_(False)
         self._pi_tar = torch.compile(pi_tar, mode="default") if cfg.compile else pi_tar
 
