@@ -1,0 +1,11 @@
+# @package _global_
+defaults:
+  - medium
+  - _self_
+
+env_name: "acrobot"
+task_name: "swingup"
+
+agent:
+  enc_tau: 0.0005
+  nstep: 3

@@ -1,0 +1,56 @@
+# defaults:
+#   - submitit_slurm
+
+# _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
+# # submitit_folder: ${hydra.sweep.dir}/.submitit/%j
+# # timeout_min: 360 # 6 hours
+# # cpus_per_task: 6 # 6 cpus
+# # gpus_per_node: 0
+# # tasks_per_node: 1
+# # nodes: 1
+# # name: ${hydra.job.name}
+# # comment: null
+# # exclude: null
+# # cpus_per_gpu: null
+# # gpus_per_task: null
+# # mem_per_cpu: 10000 # 1000MB of memory
+# # signal_delay_s: 600
+# # max_num_timeout: 20
+# # additional_parameters: {}
+# # array_parallelism: 256
+# # setup: []
+
+# timeout_min: 720
+# # cpus_per_task: 1
+# cpus_per_task: 6
+# gpus_per_node: 0
+# tasks_per_node: 1
+# # tasks_per_node: 6
+# mem_gb: 4
+# nodes: 1
+# name: ${hydra.job.name}
+
+defaults:
+  - submitit_slurm
+
+_target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
+# submitit_folder: ${hydra.sweep.dir}/.submitit/%j
+timeout_min: 120 # 2 hours
+# timeout_min: 4320 # 72 hours
+# cpus_per_task: 4
+# gpus_per_node: 4
+tasks_per_node: 1
+nodes: 1
+name: ${hydra.job.name}
+comment: null
+exclude: null
+# cpus_per_gpu: null
+# gpus_per_task: null
+signal_delay_s: 600
+max_num_timeout: 20
+additional_parameters: {}
+array_parallelism: 256
+setup: []
+constraint: "volta"
+mem_gb: 50
+gres: gpu:1

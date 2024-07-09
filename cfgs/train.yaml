@@ -1,0 +1,51 @@
+defaults:
+  - base_train_config
+  - agent: iqrl
+  # - override hydra/launcher: slurm # Use slurm (on cluster) for multirun
+  - override hydra/launcher: lumi_12hrs # Use slurm (on cluster) for multirun
+  - override hydra/job_logging: colorlog
+  # - override hydra/hydra_logging: hydra_debug
+  - override hydra/hydra_logging: colorlog
+  - _self_
+
+
+env_name: "walker"
+task_name: "walk"
+
+# Observation stuff
+from_pixels: false
+pixels_only: false
+num_frames_to_stack: 3
+
+# Experiment
+max_episode_steps: 500 # Max episode length (1000 steps as action_repeat=2)
+num_episodes: 500 # Number of training episodes
+random_episodes: 10 # Number of random episodes at start
+action_repeat: 2
+buffer_size: 10_000_000
+prefetch: 5
+seed: 42
+checkpoint: null # /file/path/to/checkpoint
+device: "cuda"  # "cpu" or "cuda" etc
+
+# Evaluation
+eval_every_episodes: 10
+num_eval_episodes: 10
+capture_eval_video: True # Fails on AMD GPU so set to False
+capture_train_video: False
+log_dormant_neuron_ratio: False
+
+# W&B config
+use_wandb: False
+wandb_project_name: "iqrl"
+run_name: ${agent.name}__${seed}__${now:%Y-%m-%d_%H-%M-%S}
+
+hydra:
+  verbose: false
+  run:
+    dir: output/hydra/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}
+  job:
+    chdir: true
+  sweep:
+    dir: ${hydra.run.dir}
+    subdir: ${hydra.job.num}
