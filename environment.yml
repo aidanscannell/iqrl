@@ -32,14 +32,10 @@ dependencies:
   - pip:
       - numpy==1.26.4 # Needed to stop wandb raising numpy error
       - torchrl==0.3.1
-      # - gymnasium[mujoco]==0.29.1
       # TODO metaworld wants to use gymnasium==1.0.0a1
       - git+https://github.com/Farama-Foundation/Metaworld.git@master#egg=metaworld==2.0.0
       - jaxtyping==0.2.23  # Types with shapes for tensors
       - dm_control==1.0.14  # Handles mujoco installation
-      # - dm_control==1.0.15  # Handles mujoco installation
       - jaxtyping
-      # - umap
       - vector_quantize_pytorch==1.15.6 # This installs PyTorch (needs >2.0)
-      # - gymnasium[mujoco]==0.29.1
       - tensordict==0.3.1
