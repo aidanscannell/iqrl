@@ -426,10 +426,6 @@ class iQRL(Agent):
         num_updates = int(num_new_transitions * self.cfg.utd_ratio)
         info = {}
 
-        self.encoder.train()
-        self.Q.train()
-        self._pi.train()
-
         logger.info(f"Performing {num_updates} iQRL updates...")
         for i in range(num_updates):
             batch = replay_buffer.sample()
@@ -476,6 +472,7 @@ class iQRL(Agent):
 
     # @torch.compile
     def representation_update_step(self, batch: ReplayBufferSamples):
+        self.encoder.train()
         loss, info = self.encoder.loss(batch=batch)
 
         self.enc_opt.zero_grad(set_to_none=True)
@@ -499,6 +496,7 @@ class iQRL(Agent):
                 self.encoder._proj, self.encoder._proj_tar, tau=self.cfg.enc_tau
             )
 
+        self.encoder.eval()
         return info
 
     def critic_update_step(self, batch: ReplayBufferSamples):
@@ -578,7 +576,6 @@ class iQRL(Agent):
             obs = obs.view(1)
             is_flat_obs = True
 
-        self.encoder.eval()
         z = self.encoder.encode(obs, tar=False).to(torch.float)
 
         a = self.pi(z["state"], tar=False, eval_mode=eval_mode)
