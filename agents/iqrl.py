@@ -329,7 +329,8 @@ class Encoder(nn.Module):
                 """Mean squared error"""
                 _tc_loss = torch.mean((zs - zs_tar) ** 2, dim=-1)
             _rho_tc_loss = rho * torch.mean((1 - terminateds_or_dones) * _tc_loss, -1)
-            tc_loss = torch.mean(_rho_tc_loss)
+            tc_loss = torch.sum(_rho_tc_loss)
+            # tc_loss = torch.mean(_rho_tc_loss)
 
         loss = tc_loss + reward_loss
         info = {
