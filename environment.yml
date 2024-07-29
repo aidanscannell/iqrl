@@ -31,6 +31,7 @@ dependencies:
   - matplotlib
   - pip
   - pip:
+      - numpy==1.26.4 # Needed to stop wandb raising numpy error
       - torchrl==0.3.1
       # - gymnasium[mujoco]==0.29.1
       # TODO metaworld wants to use gymnasium==1.0.0a1
@@ -43,6 +44,3 @@ dependencies:
       - vector_quantize_pytorch # This installs PyTorch (needs >2.0)
       # - gymnasium[mujoco]==0.29.1
       - tensordict==0.3.1
-      - git+https://github.com/Farama-Foundation/Metaworld.git@master#egg=metaworld==2.0.0
-      # Need to get gymnasium-robotics from git repo to get it with gymnasium==1.0.0a2
-      - git+https://github.com/Farama-Foundation/Gymnasium-Robotics.git@main#egg=gymnasium-robotics==1.3.0.a1
