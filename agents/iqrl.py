@@ -294,10 +294,10 @@ class Encoder(nn.Module):
             if self.cfg.use_fsq:
                 next_z_pred = self.quantize(next_z_pred)["state"]
 
-            zs[t] = z
-
             # Don't forget this
             z = next_z_pred
+
+            zs[t] = z
 
         rho = torch.tensor([self.cfg.rho**t for t in range(self.cfg.horizon)]).to(
             self.cfg.device
