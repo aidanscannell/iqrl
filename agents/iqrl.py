@@ -386,7 +386,7 @@ class iQRL(Agent):
         self.encoder = Encoder(cfg, obs_spec=obs_spec, act_spec=act_spec).to(cfg.device)
         if cfg.compile:
             self.encoder = torch.compile(self.encoder, mode="default")
-        self.enc_opt = torch.optim.AdamW(self.encoder.parameters(), lr=self.cfg.enc_lr)
+        self.enc_opt = torch.optim.AdamW(self.encoder.parameters(), lr=cfg.enc_lr)
 
         ##### Init actor network and its target network #####
         self._pi = Actor(
