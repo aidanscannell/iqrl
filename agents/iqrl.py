@@ -391,8 +391,8 @@ class iQRL(Agent):
         self._pi = Actor(
             cfg,
             act_dim=act_dim,
-            action_scale=(act_spec.high - act_spec.low).to(self.cfg.device) / 2.0,
-            action_bias=(act_spec.high + act_spec.low).to(self.cfg.device) / 2.0,
+            action_scale=(act_spec.high - act_spec.low).to(cfg.device) / 2.0,
+            action_bias=(act_spec.high + act_spec.low).to(cfg.device) / 2.0,
             act_low=act_spec.low,
             act_high=act_spec.high,
         ).to(cfg.device)
@@ -407,14 +407,14 @@ class iQRL(Agent):
         self.Q_tar = torch.compile(Q_tar, mode="default") if cfg.compile else Q_tar
 
         ##### Optimizers #####
-        self.pi_opt = torch.optim.Adam(self._pi.parameters(), lr=self.cfg.lr)
-        self.q_opt = torch.optim.Adam(self.Q.parameters(), lr=self.cfg.lr)
+        self.pi_opt = torch.optim.Adam(self._pi.parameters(), lr=cfg.lr)
+        self.q_opt = torch.optim.Adam(self.Q.parameters(), lr=cfg.lr)
 
         ##### Exploration noise schedule #####
         self._exploration_noise_schedule = h.LinearSchedule(
-            start=self.cfg.exploration_noise_start,
-            end=self.cfg.exploration_noise_end,
-            num_steps=self.cfg.exploration_noise_num_steps,
+            start=cfg.exploration_noise_start,
+            end=cfg.exploration_noise_end,
+            num_steps=cfg.exploration_noise_num_steps,
         )
 
         # Counters for number of param updates
