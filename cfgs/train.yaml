@@ -1,8 +1,8 @@
 defaults:
   - base_train_config
   - agent: iqrl
-  # - override hydra/launcher: slurm # Use slurm (on cluster) for multirun
-  - override hydra/launcher: lumi_12hrs # Use slurm (on cluster) for multirun
+  - override hydra/launcher: slurm # Use slurm (on cluster) for multirun
+  # - override hydra/launcher: lumi_12hrs # Use slurm (on cluster) for multirun
   - override hydra/job_logging: colorlog
   # - override hydra/hydra_logging: hydra_debug
   - override hydra/hydra_logging: colorlog
