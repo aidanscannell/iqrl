@@ -1,0 +1,4 @@
+pip uninstall torch torchvision
+pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm5.6
+conda install ffmpeg -c conda-forge
+conda env config vars set MUJOCO_GL=egl PYOPENGL_PLATFORM=egl
