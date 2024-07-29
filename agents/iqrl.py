@@ -587,13 +587,12 @@ class iQRL(Agent):
         a = self._pi_tar(z) if tar else self._pi(z)
         if not eval_mode:
             a += torch.normal(0, self._pi.action_scale * self.exploration_noise)
-        a = a.clip(self.act_spec_low, self.act_spec_high)
         if smooth:
             clipped_noise = (
                 torch.randn_like(a, device=self.cfg.device) * self.cfg.policy_noise
             ).clamp(-self.cfg.noise_clip, self.cfg.noise_clip) * self._pi.action_scale
             a += clipped_noise
-
+        a = a.clamp(self.act_spec_low, self.act_spec_high)
         return a
 
     @property
