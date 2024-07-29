@@ -36,7 +36,6 @@ use_latent_projection: False
 projection_mlp_dims: [256]
 proj_dim: null # if null proj_dim=int(latent_dim/16)
 
-
 ##### Exploration noise schedule #####
 exploration_noise_start: 1.0
 exploration_noise_end: 0.1
