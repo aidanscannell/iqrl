@@ -361,6 +361,22 @@ class Encoder(nn.Module):
 
         return metrics
 
+    def train(self):
+        self._encoder.train()
+        self._trans.train()
+        if self.cfg.use_rew_loss:
+            self._reward.train()
+        if self.cfg.use_latent_projection:
+            self._proj.train()
+
+    def eval(self):
+        self._encoder.eval()
+        self._trans.eval()
+        if self.cfg.use_rew_loss:
+            self._reward.eval()
+        if self.cfg.use_latent_projection:
+            self._proj.eval()
+
 
 class iQRL(Agent):
     def __init__(
