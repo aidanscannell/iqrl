@@ -1,0 +1,31 @@
+defaults:
+  - submitit_slurm
+
+_target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
+account: project_462000462
+partition: small-g # Partition (queue) name
+timeout_min: 2880 # 48 hours
+# cpus_per_task: 6
+# gpus_per_node: 1
+tasks_per_node: 1
+# mem_gb: 32
+mem_gb: 64
+# mem_gb: 50
+nodes: 1
+name: ${env_name}-${task_name}-${agent.name}
+qos: null
+comment: null
+exclude: null
+gres: gpu:1
+# gres: null
+cpus_per_gpu: null
+gpus_per_task: null
+mem_per_gpu: null
+mem_per_cpu: null
+signal_delay_s: 6000
+max_num_timeout: 0
+additional_parameters: {}
+array_parallelism: 256
+setup: null
+# constraint: "volta"
+stderr_to_stdout: true
