@@ -4,9 +4,8 @@ from typing import NamedTuple, Optional
 
 import torch
 from tensordict import TensorDict
-from torchrl.data import ReplayBuffer
 from torchrl.data import ReplayBuffer as TorchRLReplayBuffer
-from torchrl.data.replay_buffers import LazyMemmapStorage, TensorDictReplayBuffer
+from torchrl.data.replay_buffers import LazyMemmapStorage
 from torchrl.data.replay_buffers.samplers import SliceSampler
 
 
