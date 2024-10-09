@@ -31,7 +31,7 @@ class TrainConfig:
     # Evaluation
     eval_every_episodes: int = 10
     num_eval_episodes: int = 10
-    capture_eval_video: bool = True  # Fails on AMD GPU so set to False
+    capture_eval_video: bool = False  # Fails on AMD GPU so set to False
     capture_train_video: bool = False
     log_dormant_neuron_ratio: bool = False
 
