@@ -2,20 +2,12 @@ defaults:
   - base_train_config
   - agent: iqrl
   - override hydra/launcher: slurm # Use slurm (on cluster) for multirun
-  # - override hydra/launcher: lumi_12hrs # Use slurm (on cluster) for multirun
   - override hydra/job_logging: colorlog
-  # - override hydra/hydra_logging: hydra_debug
   - override hydra/hydra_logging: colorlog
   - _self_
 
-
 env_name: "walker"
 task_name: "walk"
-
-# Observation stuff
-from_pixels: false
-pixels_only: false
-num_frames_to_stack: 3
 
 # Experiment
 max_episode_steps: 500 # Max episode length (1000 steps as action_repeat=2)
