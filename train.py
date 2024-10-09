@@ -100,7 +100,6 @@ def train(cfg: TrainConfig):
         task_name=cfg.task_name,
         seed=cfg.seed,
         frame_skip=cfg.action_repeat,
-        num_frames_to_stack=cfg.num_frames_to_stack,
         from_pixels=False,
         pixels_only=False,
         device=cfg.device,
