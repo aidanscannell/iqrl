@@ -18,7 +18,7 @@ class TrainConfig:
     agent: iQRLConfig = field(default_factory=iQRLConfig)
 
     # Experiment
-    max_episode_steps: int = 500  # Max episode length (1000 steps as action_repeat=2)
+    max_episode_steps: int = 1000  # Max episode length
     num_episodes: int = 500  # Number of training episodes
     random_episodes: int = 10  # Number of random episodes at start
     action_repeat: int = 2
@@ -105,7 +105,6 @@ def train(cfg: TrainConfig):
         from_pixels=False,
         pixels_only=False,
         device=cfg.device,
-        # max_episode_steps=cfg.max_episode_steps,
     )
     env = make_env_fn(record_video=False)
     eval_env = make_env_fn(record_video=False)
@@ -208,7 +207,8 @@ def train(cfg: TrainConfig):
                     for idx in range(cfg.num_eval_episodes):
                         print(f"Eval episode {idx}")
                         eval_data = eval_env.rollout(
-                            max_steps=cfg.max_episode_steps, policy=eval_policy_module
+                            max_steps=cfg.max_episode_steps // cfg.action_repeat,
+                            policy=eval_policy_module,
                         )
                         episodic_returns.append(
                             eval_data["next"]["episode_reward"][-1].cpu().item()
@@ -227,7 +227,8 @@ def train(cfg: TrainConfig):
                         eval_metrics.update({"episodic_success": episodic_success})
                     if cfg.capture_eval_video:
                         video_env.rollout(
-                            max_steps=cfg.max_episode_steps, policy=eval_policy_module
+                            max_steps=cfg.max_episode_steps // cfg.action_repeat,
+                            policy=eval_policy_module,
                         )
                         video_env.transform.dump()
 

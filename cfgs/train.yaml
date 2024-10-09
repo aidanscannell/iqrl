@@ -10,7 +10,7 @@ env_name: "walker"
 task_name: "walk"
 
 # Experiment
-max_episode_steps: 500 # Max episode length (1000 steps as action_repeat=2)
+max_episode_steps: 1000 # Max episode length
 num_episodes: 500 # Number of training episodes
 random_episodes: 10 # Number of random episodes at start
 action_repeat: 2
