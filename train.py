@@ -54,25 +54,16 @@ cs.store(name="base_iqrl", group="agent", node=iQRLConfig)
 @hydra.main(version_base="1.3", config_path="./cfgs", config_name="train")
 def train(cfg: TrainConfig):
     import logging
-    import math
     import pprint
     import random
     import time
 
-    import torch
-
-    # This is needed to render videos on GPU
-    if torch.cuda.is_available() and (cfg.device == "cuda"):
-        os.environ["MUJOCO_GL"] = "osmesa"
-        os.environ["PYOPENGL_PLATFORM"] = "osmesa"
-
     import agents
-    import helper as h
     import numpy as np
+    import torch
     from envs import make_env
     from tensordict.nn import TensorDictModule
     from torchrl.data.tensor_specs import BoundedTensorSpec
-    from torchrl.record.loggers.csv import CSVLogger
     from torchrl.record.loggers.wandb import WandbLogger
     from utils import ReplayBuffer
 
