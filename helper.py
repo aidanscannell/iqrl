@@ -293,8 +293,11 @@ def calc_rank(name, z):
     rank1 = matrix_rank(z, atol=1e-1, rtol=1e-1)
     condition = cond(z)
     info = {}
+    full_rank = z.shape[-1]
     for j, rank in enumerate([rank1, rank2, rank3]):
+        rank_percent = rank.item() / full_rank * 100
         info.update({f"{name}-rank-{j}": rank.item()})
+        info.update({f"{name}-rank-percent-{j}": rank_percent})
     info.update({f"{name}-cond-num": condition.item()})
     return info
 
