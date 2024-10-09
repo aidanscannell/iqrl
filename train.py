@@ -102,14 +102,9 @@ def train(cfg: TrainConfig):
         exp_name=cfg.run_name,
         offline=not cfg.use_wandb,
         project=cfg.wandb_project_name,
-        # log_dir="./logs",
         group=f"{cfg.env_name}-{cfg.task_name}",
         tags=[f"{cfg.env_name}-{cfg.task_name}", f"seed={str(cfg.seed)}"],
-        # config=cfg_dict,
-        #     monitor_gym=cfg.monitor_gym,
         save_code=True,
-        # dir=os.path.join(get_original_cwd(), "output"),
-        # dir="./logs",
     )
     writer.log_hparams(cfg)
 
