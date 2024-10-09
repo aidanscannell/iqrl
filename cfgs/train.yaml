@@ -21,7 +21,7 @@ checkpoint: null # /file/path/to/checkpoint
 device: "cuda"  # "cpu" or "cuda" etc
 
 # Evaluation
-eval_every_episodes: 10
+eval_every_episodes: 20
 num_eval_episodes: 10
 capture_eval_video: False # Fails on AMD GPU so set to False
 capture_train_video: False
