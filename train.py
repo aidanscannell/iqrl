@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import os
 from dataclasses import dataclass, field
 from functools import partial
 from typing import Optional
@@ -204,7 +203,7 @@ def train(cfg: TrainConfig):
                 eval_metrics = {}
                 with torch.no_grad():
                     episodic_returns, episodic_successes = [], []
-                    for idx in range(cfg.num_eval_episodes):
+                    for _ in range(cfg.num_eval_episodes):
                         eval_data = eval_env.rollout(
                             max_steps=cfg.max_episode_steps // cfg.action_repeat,
                             policy=eval_policy_module,
