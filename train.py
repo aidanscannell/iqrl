@@ -37,8 +37,8 @@ class TrainConfig:
 
     # W&B config
     use_wandb: bool = False
-    wandb_project_name: str = "iQRL"
-    run_name: str = f"TD3"
+    wandb_project_name: str = "iqrl"
+    run_name: str = f"iqrl"
 
 
 cs = ConfigStore.instance()
