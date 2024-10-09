@@ -205,7 +205,6 @@ def train(cfg: TrainConfig):
                 with torch.no_grad():
                     episodic_returns, episodic_successes = [], []
                     for idx in range(cfg.num_eval_episodes):
-                        print(f"Eval episode {idx}")
                         eval_data = eval_env.rollout(
                             max_steps=cfg.max_episode_steps // cfg.action_repeat,
                             policy=eval_policy_module,
