@@ -59,15 +59,21 @@ class ReplayBuffer:
             batch_size=batch_size * nstep,
             # transform=MultiStepTransform(n_steps=3, gamma=0.95),
         )
+        self.batch_size = batch_size
 
     def extend(self, data):
         self.rb.extend(data.cpu())
 
-    def sample(self, return_nstep: bool = False) -> ReplayBufferSamples:
-        batch = self.rb.sample().view(-1, self.nstep).transpose(0, 1)
-        next_state_gammas = torch.ones_like(
-            batch["next"]["done"][..., 0], dtype=torch.float32
-        )
+    def sample(
+        self, return_nstep: bool = False, batch_size: Optional[int] = None
+    ) -> ReplayBufferSamples:
+        batch = self._sample()
+        if batch_size is not None and batch_size > self.batch_size:
+            # TODO Fix this hack to get larger batch size
+            # If requesting large batch size sample multiple times and concat
+            for _ in range(batch_size // self.batch_size):
+                batch = torch.cat([batch, self._sample()], 1)
+            batch = batch[:, :batch_size]
         batch = ReplayBufferSamples(
             observations=batch["observation"],
             actions=batch["action"],
@@ -75,7 +81,7 @@ class ReplayBuffer:
             dones=batch["next"]["done"][..., 0],
             terminateds=batch["next"]["terminated"][..., 0].to(torch.int),
             rewards=batch["next"]["reward"][..., 0],
-            next_state_gammas=next_state_gammas,
+            next_state_gammas=batch["next_state_gammas"],
             z=None,
             next_z=None,
         )
@@ -83,6 +89,14 @@ class ReplayBuffer:
             return batch
         else:
             return to_nstep(batch, nstep=self.nstep, gamma=self.gamma)
+
+    def _sample(self) -> TensorDict:
+        batch = self.rb.sample().view(-1, self.nstep).transpose(0, 1)
+        next_state_gammas = torch.ones_like(
+            batch["next"]["done"][..., 0], dtype=torch.float32
+        )
+        batch.update({"next_state_gammas": next_state_gammas}, inplace=True)
+        return batch
 
 
 @torch.no_grad()

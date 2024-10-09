@@ -245,7 +245,7 @@ def train(cfg: TrainConfig):
                 )
 
                 ##### Log rank of latent and active codebook percent #####
-                batch = rb.sample()
+                batch = rb.sample(batch_size=agent.encoder.cfg.latent_dim)
                 eval_metrics.update(agent.metrics(batch))
 
                 ##### Log metrics to W&B or csv #####
