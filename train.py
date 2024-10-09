@@ -17,11 +17,6 @@ class TrainConfig:
 
     agent: iQRLConfig = field(default_factory=iQRLConfig)
 
-    # Observation stuff
-    from_pixels: bool = False
-    pixels_only: bool = False
-    num_frames_to_stack: int = 3  # only used for pixel observations
-
     # Experiment
     max_episode_steps: int = 500  # Max episode length (1000 steps as action_repeat=2)
     num_episodes: int = 500  # Number of training episodes
@@ -107,8 +102,8 @@ def train(cfg: TrainConfig):
         seed=cfg.seed,
         frame_skip=cfg.action_repeat,
         num_frames_to_stack=cfg.num_frames_to_stack,
-        from_pixels=cfg.from_pixels,
-        pixels_only=cfg.pixels_only,
+        from_pixels=False,
+        pixels_only=False,
         device=cfg.device,
         # max_episode_steps=cfg.max_episode_steps,
     )
