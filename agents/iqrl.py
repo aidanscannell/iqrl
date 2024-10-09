@@ -351,9 +351,23 @@ class Encoder(nn.Module):
 
         # Calculate percentage of codebook that's active
         if self.cfg.use_fsq:
-            num_codes = math.prod(self.cfg.fsq_levels)
-            active_percent = z["indices"].unique().numel() / num_codes * 100
-            metrics.update({"active_percent": active_percent})
+            num_codes = torch.tensor(math.prod(self.cfg.fsq_levels), device=z.device)
+
+            def act_percent_fn(z):
+                # TODO can't vmap this because Tensor.unique() not allowed in vmap
+                return z.unique().numel() / num_codes * 100
+
+            active_percents = torch.empty(z["indices"].shape[1])
+            for i in range(z["indices"].shape[1]):
+                active_percents[i] = act_percent_fn(z["indices"][i])
+            metrics.update(
+                {
+                    # "active_percent": active_percent,
+                    "active_percent_avg": active_percents.mean(),
+                    "active_percent_min": active_percents.min(),
+                    "active_percent_max": active_percents.max(),
+                }
+            )
 
         # TODO add dormant neuron ratio stuff
         # metrics.update(h.calc_dormant_neuron_ratio(batch, agent=self))
