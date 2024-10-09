@@ -105,6 +105,8 @@ class iQRLConfig:
     compile: bool = False
     """All NNs will be put on this device"""
     device: str = "cuda"
+    """Print training losses?"""
+    verbose: bool = False
     name: str = "iQRL"
 
 
@@ -456,7 +458,8 @@ class iQRL(Agent):
         num_updates = int(num_new_transitions * self.cfg.utd_ratio)
         info = {}
 
-        logger.info(f"Performing {num_updates} iQRL updates...")
+        if self.cfg.verbose:
+            logger.info(f"Performing {num_updates} iQRL updates...")
         for i in range(num_updates):
             batch = replay_buffer.sample()
 
@@ -485,9 +488,10 @@ class iQRL(Agent):
                 info.update(self.pi_update_step(batch=nstep_batch))
 
             if i % self.cfg.logging_freq == 0:
-                logger.info(
-                    f"Iteration {i} | loss {info['enc_loss']:.3} | tc loss {info['tc_loss']:.3} | reward loss {info['reward_loss']:.3}"
-                )
+                if self.cfg.verbose:
+                    logger.info(
+                        f"Iteration {i} | loss {info['enc_loss']:.3} | tc loss {info['tc_loss']:.3} | reward loss {info['reward_loss']:.3}"
+                    )
                 if wandb.run is not None:
                     wandb.log(info)
 
@@ -497,7 +501,8 @@ class iQRL(Agent):
 
         self._exploration_noise_schedule.step()
 
-        logger.info("Finished training iQRL")
+        if self.cfg.verbose:
+            logger.info("Finished training iQRL")
         return info
 
     # @torch.compile

@@ -19,6 +19,7 @@ prefetch: 5
 seed: 42
 checkpoint: null # /file/path/to/checkpoint
 device: "cuda"  # "cpu" or "cuda" etc
+verbose: False # Print training losses etc
 
 # Evaluation
 eval_every_episodes: 20

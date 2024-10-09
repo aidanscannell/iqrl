@@ -49,4 +49,5 @@ noise_clip: 0.3
 logging_freq: 100
 compile: False
 device: ${device}
+verbose: False # Print training losses etc
 name: "iQRL"

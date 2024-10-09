@@ -26,6 +26,7 @@ class TrainConfig:
     seed: int = 42
     checkpoint: Optional[str] = None  # /file/path/to/checkpoint
     device: str = "cuda"  # "cpu" or "cuda" etc
+    verbose: bool = False  # if true print training progress
 
     # Evaluation
     eval_every_episodes: int = 20
@@ -164,9 +165,10 @@ def train(cfg: TrainConfig):
         num_new_transitions = data["next"]["step_count"][-1].cpu().item()
         step += num_new_transitions
         episode_reward = data["next"]["episode_reward"][-1].cpu().item()
-        logger.info(
-            f"Train | Return {episode_reward:.2f} | Env Step {step*cfg.action_repeat} | Episode {episode_idx}"
-        )
+        if cfg.verbose:
+            logger.info(
+                f"Episode {episode_idx} | Env Step {step*cfg.action_repeat} | Train return {episode_reward:.2f}"
+            )
         rollout_metrics = {
             "episodic_return": episode_reward,
             "episodic_return": episode_reward,
@@ -182,13 +184,9 @@ def train(cfg: TrainConfig):
 
         ##### Train agent (after collecting some random episodes) #####
         if episode_idx > cfg.random_episodes - 1:
-            logger.info(
-                f"Training agent w. {num_new_transitions} new data @ step {step*cfg.action_repeat}..."
-            )
             train_metrics = agent.update(
                 replay_buffer=rb, num_new_transitions=num_new_transitions
             )
-            logger.info("Finished training agent.")
 
             ##### Log training metrics #####
             writer.log_scalar(name="train/", value=train_metrics)
@@ -214,7 +212,7 @@ def train(cfg: TrainConfig):
                         if success is not None:
                             episodic_successes.append(success.any())
 
-                    episodic_return = sum(episodic_returns) / cfg.num_eval_episodes
+                    eval_episodic_return = sum(episodic_returns) / cfg.num_eval_episodes
 
                     if success is not None:
                         # TODO is episodic_successes being calculated correctly
@@ -232,7 +230,7 @@ def train(cfg: TrainConfig):
                 ##### Eval metrics #####
                 eval_metrics.update(
                     {
-                        "episodic_return": episodic_return,
+                        "episodic_return": eval_episodic_return,
                         "elapsed_time": time.time() - start_time,
                         "SPS": int(step / (time.time() - start_time)),
                         "episode_time": time.time() - episode_start_time,
@@ -240,9 +238,10 @@ def train(cfg: TrainConfig):
                         "episode": episode_idx,
                     }
                 )
-                logger.info(
-                    f"Eval | Return {episode_reward:.2f} | Env step {step*cfg.action_repeat} | Episode {episode_idx} | SPS {eval_metrics['SPS']}"
-                )
+                if cfg.verbose:
+                    logger.info(
+                        f"Episode {episode_idx} | Env Step {step*cfg.action_repeat} | Eval return {eval_episodic_return:.2f}"
+                    )
 
                 ##### Log rank of latent and active codebook percent #####
                 batch = rb.sample(batch_size=agent.encoder.cfg.latent_dim)
