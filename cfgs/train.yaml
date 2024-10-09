@@ -23,7 +23,7 @@ device: "cuda"  # "cpu" or "cuda" etc
 # Evaluation
 eval_every_episodes: 10
 num_eval_episodes: 10
-capture_eval_video: True # Fails on AMD GPU so set to False
+capture_eval_video: False # Fails on AMD GPU so set to False
 capture_train_video: False
 log_dormant_neuron_ratio: False
 
