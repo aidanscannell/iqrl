@@ -8,7 +8,8 @@ import torch.nn.functional as F
 import utils
 from functorch import combine_state_for_ensemble
 from torch.linalg import cond, matrix_rank
-from utils.batch_renorm import BatchRenorm1d
+
+# from utils.batch_renorm import BatchRenorm1d
 from vector_quantize_pytorch import FSQ as _FSQ
 
 
