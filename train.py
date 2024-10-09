@@ -169,7 +169,7 @@ def train(cfg: TrainConfig):
         out_keys=["action"],
     )
 
-    env_step = 0
+    step = 0
     start_time = time.time()
     for episode_idx in range(cfg.num_episodes):
         episode_start_time = time.time()
@@ -184,16 +184,16 @@ def train(cfg: TrainConfig):
 
         ##### Log episode metrics #####
         num_new_transitions = data["next"]["step_count"][-1].cpu().item()
-        env_step += num_new_transitions
+        step += num_new_transitions
         episode_reward = data["next"]["episode_reward"][-1].cpu().item()
         logger.info(
-            f"Train | Return {episode_reward:.2f} | Env Step {env_step} | Episode {episode_idx}"
+            f"Train | Return {episode_reward:.2f} | Env Step {step*cfg.action_repeat} | Episode {episode_idx}"
         )
         rollout_metrics = {
             "episodic_return": episode_reward,
             "episodic_return": episode_reward,
             "episodic_length": num_new_transitions,
-            "env_step": env_step,
+            "env_step": step * cfg.action_repeat,
         }
         success = data["next"].get("success", None)
         if success is not None:
@@ -205,7 +205,7 @@ def train(cfg: TrainConfig):
         ##### Train agent (after collecting some random episodes) #####
         if episode_idx > cfg.random_episodes - 1:
             logger.info(
-                f"Training agent w. {num_new_transitions} new data @ step {env_step}..."
+                f"Training agent w. {num_new_transitions} new data @ step {step*cfg.action_repeat}..."
             )
             train_metrics = agent.update(
                 replay_buffer=rb, num_new_transitions=num_new_transitions
@@ -255,14 +255,14 @@ def train(cfg: TrainConfig):
                     {
                         "episodic_return": episodic_return,
                         "elapsed_time": time.time() - start_time,
-                        "SPS": int(env_step / (time.time() - start_time)),
+                        "SPS": int(step / (time.time() - start_time)),
                         "episode_time": time.time() - episode_start_time,
-                        "env_step": env_step,
+                        "env_step": step * cfg.action_repeat,
                         "episode": episode_idx,
                     }
                 )
                 logger.info(
-                    f"Eval | Return {episode_reward:.2f} | Env step {env_step} | Episode {episode_idx} | SPS {eval_metrics['SPS']}"
+                    f"Eval | Return {episode_reward:.2f} | Env step {step*cfg.action_repeat} | Episode {episode_idx} | SPS {eval_metrics['SPS']}"
                 )
 
                 ##### Log rank of latent and active codebook percent #####
