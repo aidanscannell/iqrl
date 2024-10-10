@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import copy
 from typing import List, Optional
 
 import numpy as np
@@ -6,7 +7,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import utils
-from functorch import combine_state_for_ensemble
+
+from torch.func import functional_call, stack_module_state
 from torch.linalg import cond, matrix_rank
 from utils.batch_renorm import BatchRenorm1d
 from vector_quantize_pytorch import FSQ as _FSQ
@@ -146,24 +148,35 @@ class NormedLinear(nn.Linear):
 
 
 class Ensemble(nn.Module):
-    """
-    Vectorized ensemble of modules.
-
-    Adapted from https://github.com/nicklashansen/tdmpc2/blob/main/tdmpc2/common/layers.py
-    """
+    """Vectorized ensemble of modules"""
 
     def __init__(self, modules, **kwargs):
         super().__init__()
-        modules = nn.ModuleList(modules)
-        fn, params, _ = combine_state_for_ensemble(modules)
+
+        self.params_dict, self._buffers = stack_module_state(modules)
+        self.params = nn.ParameterList([p for p in self.params_dict.values()])
+
+        # Construct a "stateless" version of one of the models. It is "stateless" in
+        # the sense that the parameters are meta Tensors and do not have storage.
+        base_model = copy.deepcopy(modules[0])
+        base_model = base_model.to("meta")
+
+        def fmodel(params, buffers, x):
+            return functional_call(base_model, (params, buffers), (x,))
+
         self.vmap = torch.vmap(
-            fn, in_dims=(0, 0, None), randomness="different", **kwargs
+            fmodel, in_dims=(0, 0, None), randomness="different", **kwargs
         )
-        self.params = nn.ParameterList([nn.Parameter(p) for p in params])
         self._repr = str(modules)
 
     def forward(self, *args, **kwargs):
-        return self.vmap([p for p in self.params], (), *args, **kwargs)
+        return self.vmap(self._get_params_dict(), self._buffers, *args, **kwargs)
+
+    def _get_params_dict(self):
+        params_dict = {}
+        for key, value in zip(self.params_dict.keys(), self.params):
+            params_dict.update({key: value})
+        return params_dict
 
     def __repr__(self):
         return "Vectorized " + self._repr
