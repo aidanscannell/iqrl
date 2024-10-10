@@ -161,7 +161,10 @@ def train(cfg: TrainConfig):
         episode_start_time = time.time()
         ##### Rollout the policy in the environment #####
         with torch.no_grad():
-            data = env.rollout(max_steps=cfg.max_episode_steps, policy=policy_module)
+            data = env.rollout(
+                max_steps=cfg.max_episode_steps // cfg.action_repeat,
+                policy=policy_module,
+            )
         if episode_idx == 0:
             print(colored("First episodes data:", "green", attrs=["bold"]), data)
 
