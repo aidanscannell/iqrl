@@ -35,7 +35,7 @@ class TrainConfig:
 
     # Experiment
     max_episode_steps: int = 1000  # Max episode length
-    num_episodes: int = 500  # Number of training episodes
+    num_episodes: int = 3000  # Number of training episodes
     random_episodes: int = 10  # Number of random episodes at start
     action_repeat: int = 2
     buffer_size: int = 10_000_000
