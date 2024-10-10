@@ -41,8 +41,8 @@ class TrainConfig:
 
 
 cs = ConfigStore.instance()
-cs.store(name="base_train_config", node=TrainConfig)
-cs.store(name="base_iqrl", group="agent", node=iQRLConfig)
+cs.store(name="train_cfg", node=TrainConfig)
+cs.store(name="iqrl", group="agent", node=iQRLConfig)
 
 
 @hydra.main(version_base="1.3", config_path="./cfgs", config_name="train")
