@@ -109,9 +109,9 @@ class iQRLConfig:
     """If True try to compile all NNs"""
     compile: bool = False
     """All NNs will be put on this device"""
-    device: str = "cuda"
+    device: str = "${device}"  # set from TrainConfig
     """Print training losses?"""
-    verbose: bool = False
+    verbose: str = "${verbose}"  # set from TrainConfig
     name: str = "iQRL"
 
 

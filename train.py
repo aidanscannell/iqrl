@@ -1,52 +1,12 @@
 #!/usr/bin/env python3
-import time
-from dataclasses import dataclass, field
 from functools import partial
-from typing import Optional
 
 import hydra
-from hydra.core.config_store import ConfigStore
-from iqrl import iQRLConfig
+from configs import TrainConfig
 
 
-@dataclass
-class TrainConfig:
-    env_name: str = "dog"
-    task_name: str = "run"
-
-    agent: iQRLConfig = field(default_factory=iQRLConfig)
-
-    # Experiment
-    max_episode_steps: int = 1000  # Max episode length
-    num_episodes: int = 500  # Number of training episodes
-    random_episodes: int = 10  # Number of random episodes at start
-    action_repeat: int = 2
-    buffer_size: int = 10_000_000
-    prefetch: int = 5
-    seed: int = 42
-    checkpoint: Optional[str] = None  # /file/path/to/checkpoint
-    device: str = "cuda"  # "cpu" or "cuda" etc
-    verbose: bool = False  # if true print training progress
-
-    # Evaluation
-    eval_every_episodes: int = 20
-    num_eval_episodes: int = 10
-    capture_eval_video: bool = False  # Fails on AMD GPU so set to False
-    capture_train_video: bool = False
-    log_dormant_neuron_ratio: bool = False
-
-    # W&B config
-    use_wandb: bool = False
-    wandb_project_name: str = "iqrl"
-    run_name: str = f"iqrl-{time.time()}"
-
-
-cs = ConfigStore.instance()
-cs.store(name="train_cfg", node=TrainConfig)
-cs.store(name="iqrl", group="agent", node=iQRLConfig)
-
-
-@hydra.main(version_base="1.3", config_path="./cfgs", config_name="train")
+# @hydra.main(version_base="1.3", config_path="./cfgs", config_name="train")
+@hydra.main(version_base="1.3", config_name="train")
 def train(cfg: TrainConfig):
     import logging
     import random
@@ -74,7 +34,6 @@ def train(cfg: TrainConfig):
     cfg.device = (
         "cuda" if torch.cuda.is_available() and (cfg.device == "cuda") else "cpu"
     )
-    cfg.agent.device = cfg.device
 
     ###### Initialise W&B ######
     writer = WandbLogger(
