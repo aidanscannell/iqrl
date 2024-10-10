@@ -210,6 +210,64 @@ def train(cfg: TrainConfig):
     print(colored("Learnable parameters:", "green", attrs=["bold"]), f"{total_params}M")
     print(colored("Architecture:", "green", attrs=["bold"]), agent)
 
+    def evaluate(step: int) -> dict:
+        """Evaluate agent in eval_env and log metrics"""
+        eval_metrics = {}
+        eval_start_time = time.time()
+        with torch.no_grad():
+            episodic_returns, episodic_successes = [], []
+            for _ in range(cfg.num_eval_episodes):
+                eval_data = eval_env.rollout(
+                    max_steps=cfg.max_episode_steps // cfg.action_repeat,
+                    policy=eval_policy_module,
+                )
+                episodic_returns.append(
+                    eval_data["next"]["episode_reward"][-1].cpu().item()
+                )
+                success = eval_data["next"].get("success", None)
+                if success is not None:
+                    episodic_successes.append(success.any())
+
+            eval_episodic_return = sum(episodic_returns) / cfg.num_eval_episodes
+
+            if success is not None:
+                # TODO is episodic_successes being calculated correctly
+                episodic_success = sum(episodic_successes) / cfg.num_eval_episodes
+                eval_metrics.update({"episodic_success": episodic_success})
+
+        ##### Eval metrics #####
+        eval_metrics.update(
+            {
+                "episodic_return": eval_episodic_return,
+                "elapsed_time": time.time() - start_time,
+                "SPS": int(step / (time.time() - start_time)),
+                "episode_time": (time.time() - eval_start_time) / cfg.num_eval_episodes,
+                "env_step": step * cfg.action_repeat,
+                "step": step,
+                "episode": episode_idx,
+            }
+        )
+        if cfg.verbose:
+            logger.info(
+                f"Episode {episode_idx} | Env Step {step*cfg.action_repeat} | Eval return {eval_episodic_return:.2f}"
+            )
+
+        with torch.no_grad():
+            if cfg.capture_eval_video:
+                video_env.rollout(
+                    max_steps=cfg.max_episode_steps // cfg.action_repeat,
+                    policy=eval_policy_module,
+                )
+                video_env.transform.dump()
+
+        ##### Log rank of latent and active codebook percent #####
+        batch = rb.sample(batch_size=agent.encoder.cfg.latent_dim)
+        eval_metrics.update(agent.metrics(batch))
+
+        ##### Log metrics to W&B or csv #####
+        writer.log_scalar(name="eval/", value=eval_metrics)
+        return eval_metrics
+
     step = 0
     start_time = time.time()
     for episode_idx in range(cfg.num_episodes):
@@ -220,11 +278,14 @@ def train(cfg: TrainConfig):
                 max_steps=cfg.max_episode_steps // cfg.action_repeat,
                 policy=policy_module,
             )
+        ##### Add data to the replay buffer #####
+        rb.extend(data)
+
         if episode_idx == 0:
             print(colored("First episodes data:", "green", attrs=["bold"]), data)
 
-        ##### Add data to the replay buffer #####
-        rb.extend(data)
+            # Evaluate the initial agent
+            _ = evaluate(step=step)
 
         ##### Log episode metrics #####
         num_new_transitions = data["next"]["step_count"][-1].cpu().item()
@@ -261,60 +322,7 @@ def train(cfg: TrainConfig):
 
             ###### Evaluate ######
             if episode_idx % cfg.eval_every_episodes == 0:
-                ##### Calculate avg. episodic return (optionally avg. success) #####
-                eval_metrics = {}
-                with torch.no_grad():
-                    episodic_returns, episodic_successes = [], []
-                    for _ in range(cfg.num_eval_episodes):
-                        eval_data = eval_env.rollout(
-                            max_steps=cfg.max_episode_steps // cfg.action_repeat,
-                            policy=eval_policy_module,
-                        )
-                        episodic_returns.append(
-                            eval_data["next"]["episode_reward"][-1].cpu().item()
-                        )
-                        success = eval_data["next"].get("success", None)
-                        if success is not None:
-                            episodic_successes.append(success.any())
-
-                    eval_episodic_return = sum(episodic_returns) / cfg.num_eval_episodes
-
-                    if success is not None:
-                        # TODO is episodic_successes being calculated correctly
-                        episodic_success = (
-                            sum(episodic_successes) / cfg.num_eval_episodes
-                        )
-                        eval_metrics.update({"episodic_success": episodic_success})
-                    if cfg.capture_eval_video:
-                        video_env.rollout(
-                            max_steps=cfg.max_episode_steps // cfg.action_repeat,
-                            policy=eval_policy_module,
-                        )
-                        video_env.transform.dump()
-
-                ##### Eval metrics #####
-                eval_metrics.update(
-                    {
-                        "episodic_return": eval_episodic_return,
-                        "elapsed_time": time.time() - start_time,
-                        "SPS": int(step / (time.time() - start_time)),
-                        "episode_time": time.time() - episode_start_time,
-                        "env_step": step * cfg.action_repeat,
-                        "step": step,
-                        "episode": episode_idx,
-                    }
-                )
-                if cfg.verbose:
-                    logger.info(
-                        f"Episode {episode_idx} | Env Step {step*cfg.action_repeat} | Eval return {eval_episodic_return:.2f}"
-                    )
-
-                ##### Log rank of latent and active codebook percent #####
-                batch = rb.sample(batch_size=agent.encoder.cfg.latent_dim)
-                eval_metrics.update(agent.metrics(batch))
-
-                ##### Log metrics to W&B or csv #####
-                writer.log_scalar(name="eval/", value=eval_metrics)
+                evaluate(step=step)
 
         # Release some GPU memory (if possible)
         torch.cuda.empty_cache()
