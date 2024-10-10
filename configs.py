@@ -29,8 +29,6 @@ class TrainConfig:
     # Configure environment (overridden by defaults list)
     env_name: str = MISSING
     task_name: str = MISSING
-    # env_name: str = "walker"
-    # task_name: str = "walk"
 
     # Agent (overridden by defaults list)
     agent: iQRLConfig = field(default_factory=iQRLConfig)
