@@ -510,7 +510,6 @@ class iQRL(Agent):
             logger.info("Finished training iQRL")
         return info
 
-    # @torch.compile
     def representation_update_step(self, batch: ReplayBufferSamples):
         self.encoder.train()
         loss, info = self.encoder.loss(batch=batch)
