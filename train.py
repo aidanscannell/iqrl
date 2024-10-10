@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import time
 from dataclasses import dataclass, field
 from functools import partial
 from typing import Optional
@@ -37,7 +38,7 @@ class TrainConfig:
     # W&B config
     use_wandb: bool = False
     wandb_project_name: str = "iqrl"
-    run_name: str = f"iqrl"
+    run_name: str = f"iqrl-{time.time()}"
 
 
 cs = ConfigStore.instance()
