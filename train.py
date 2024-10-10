@@ -245,6 +245,7 @@ def train(cfg: TrainConfig):
                         "SPS": int(step / (time.time() - start_time)),
                         "episode_time": time.time() - episode_start_time,
                         "env_step": step * cfg.action_repeat,
+                        "step": step,
                         "episode": episode_idx,
                     }
                 )
