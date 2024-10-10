@@ -46,6 +46,7 @@ class iQRLConfig:
     nstep: int = 1  # nstep returns
     """What observation types to use? ["state"] or ["pixels"] or ["state", "pixels"]"""
     obs_types: List[str] = field(default_factory=lambda: ["state"])
+
     """ENCODER CONFIG"""
     """Size of latent space"""
     latent_dim: int = 512
@@ -79,6 +80,7 @@ class iQRLConfig:
     use_fsq: bool = True
     """FSQ levels - setting as [8,8] corresponds to a codebook of size 8*8=62=2^8"""
     fsq_levels: List[int] = field(default_factory=lambda: [8, 8])
+
     """PROJECTION HEAD"""
     """Project the latent using an MLP before calculating the temporal consistency loss?"""
     use_latent_projection: bool = False
@@ -86,6 +88,7 @@ class iQRLConfig:
     projection_mlp_dims: List[int] = field(default_factory=lambda: [256])
     """Dimension of projection - defaults to latent_dim/16"""
     proj_dim: Optional[int] = None
+
     """EXPLORATION NOISE SCHEDULE"""
     """Initial variance"""
     exploration_noise_start: float = 1.0
@@ -93,11 +96,13 @@ class iQRLConfig:
     exploration_noise_end: float = 0.1
     """Number of episodes do decay noise"""
     exploration_noise_num_steps: int = 50
+
     """POLICY SMOOTHING"""
     """Variance"""
     policy_noise: float = 0.2
     """Clip the noise"""
     noise_clip: float = 0.3
+
     """OTHER"""
     """Logging frequency"""
     logging_freq: int = 100
