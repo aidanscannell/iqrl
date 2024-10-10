@@ -13,15 +13,11 @@ logger = logging.getLogger(__name__)
 
 
 class ReplayBufferSamples(NamedTuple):
-    # observations: torch.Tensor
     observations: TensorDict
     actions: torch.Tensor
-    # next_observations: torch.Tensor
     next_observations: TensorDict
     dones: torch.Tensor
-    # timeouts: torch.Tensor
     terminateds: torch.Tensor
-    # truncateds: torch.Tensor
     rewards: torch.Tensor
     next_state_gammas: torch.Tensor
     z: Optional[TensorDict]
