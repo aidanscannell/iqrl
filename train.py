@@ -328,6 +328,7 @@ def train(cfg: TrainConfig):
         torch.cuda.empty_cache()
 
     env.close()
+    eval_env.close()
 
 
 if __name__ == "__main__":
