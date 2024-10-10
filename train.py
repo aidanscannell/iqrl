@@ -103,7 +103,7 @@ def train(cfg: TrainConfig):
 
     ##### Print information about run #####
     task = cfg.env_name if cfg.task_name == "" else cfg.env_name + "-" + cfg.task_name
-    steps = (cfg.num_episodes * cfg.max_episode_steps * cfg.action_repeat) / 1e6
+    steps = (cfg.num_episodes * cfg.max_episode_steps) / 1e6
     total_params = int(agent.total_params / 1e6)
     writer.log_hparams({"total_params": agent.total_params})
     print(colored("Task:", "yellow", attrs=["bold"]), task)
