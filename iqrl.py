@@ -399,9 +399,11 @@ class iQRL(nn.Module):
     def __init__(
         self, cfg: iQRLConfig, obs_spec: CompositeSpec, act_spec: BoundedTensorSpec
     ):
-        super().__init__(
-            obs_spec=obs_spec, act_spec=act_spec, device=cfg.device, name="iQRL"
-        )
+        super().__init__()
+        self.obs_spec = obs_spec
+        self.act_spec = act_spec
+        self.register_buffer("act_spec_low", act_spec.low.to(cfg.device))
+        self.register_buffer("act_spec_high", act_spec.high.to(cfg.device))
 
         if "pixels" in cfg.obs_types:
             raise NotImplementedError
