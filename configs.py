@@ -84,14 +84,14 @@ class SlurmConfig(SlurmQueueConf):
     # signal_delay_s: int = 6000
     # constraint: "volta"
     stderr_to_stdout: bool = True
-    additional_parameters: List[Any] = field(
-        default_factory=lambda: [
-            {"mail-user": "scannell.aidan@gmail.com"},
-            {"mail-type": "BEGIN"},  # send email when job begins
-            {"mail-type": "END"},  # send email when job ends
-            {"mail-type": "FAIL"},  # send email if job fails
-        ]
-    )
+    # additional_parameters: List[Any] = field(
+    #     default_factory=lambda: [
+    #         {"mail-user": "scannell.aidan@gmail.com"},
+    #         {"mail-type": "BEGIN"},  # send email when job begins
+    #         {"mail-type": "END"},  # send email when job ends
+    #         {"mail-type": "FAIL"},  # send email if job fails
+    #     ]
+    # )
 
 
 @dataclass
