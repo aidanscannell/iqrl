@@ -101,7 +101,7 @@ class LUMIConfig(SlurmConfig):
     https://github.com/facebookresearch/hydra/blob/main/plugins/hydra_submitit_launcher/hydra_plugins/hydra_submitit_launcher/config.py
     """
 
-    account: str = "project_462000462"
+    account: str = "project_462000623"
     partition: str = "small-g"  # Partition (queue) name
     timeout_min: int = 1440  # 24 hours
 
