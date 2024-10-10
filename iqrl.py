@@ -112,7 +112,6 @@ class iQRLConfig:
     device: str = "${device}"  # set from TrainConfig
     """Print training losses?"""
     verbose: str = "${verbose}"  # set from TrainConfig
-    name: str = "iQRL"
 
 
 class Actor(nn.Module):
@@ -403,7 +402,7 @@ class iQRL(Agent):
         self, cfg: iQRLConfig, obs_spec: CompositeSpec, act_spec: BoundedTensorSpec
     ):
         super().__init__(
-            obs_spec=obs_spec, act_spec=act_spec, device=cfg.device, name=cfg.name
+            obs_spec=obs_spec, act_spec=act_spec, device=cfg.device, name="iQRL"
         )
 
         if "pixels" in cfg.obs_types:

@@ -58,8 +58,8 @@ class TrainConfig:
 
 
 @dataclass
-# class SlurmConfig(SlurmQueueConf):
 class SlurmConfig:
+    # class SlurmConfig(SlurmQueueConf):
     _target_: str = (
         "hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher"
     )
@@ -83,7 +83,7 @@ class SlurmConfig:
     tasks_per_node: int = 1
     mem_gb: int = 64
     nodes: int = 1
-    name: str = "${env_name}-${task_name}-${agent.name}"
+    name: str = "${env_name}-${task_name}"
     gres: str = "gpu:1"
     signal_delay_s: int = 6000
     max_num_timeout: int = 0
