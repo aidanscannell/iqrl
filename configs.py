@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Dict
 
 from hydra.core.config_store import ConfigStore
 from iqrl import iQRLConfig
@@ -57,12 +57,16 @@ class TrainConfig:
     )
 
 
+from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf
+
+
 @dataclass
-class SlurmConfig:
-    # class SlurmConfig(SlurmQueueConf):
-    _target_: str = (
-        "hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher"
-    )
+class SlurmConfig(SlurmQueueConf):
+    # class SlurmConfig:
+    # _target_: str = (
+    #     "hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher"
+    # )
+
     # defaults: List[Any] = field(
     #     default_factory=lambda: [
     #         "submitit_slurm"
@@ -77,20 +81,21 @@ class SlurmConfig:
     # - submitit_slurm
 
     # _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
-    account: str = "project_462000462"
-    partition: str = "small-g"  # Partition (queue) name
-    timeout_min: int = 2880  # 48 hours
-    tasks_per_node: int = 1
-    mem_gb: int = 64
-    nodes: int = 1
-    name: str = "${env_name}-${task_name}"
-    gres: str = "gpu:1"
-    signal_delay_s: int = 6000
-    max_num_timeout: int = 0
-    # additional_parameters: dict = {}
-    array_parallelism: int = 256
-    # constraint: "volta"
-    stderr_to_stdout: bool = True
+    # account: str = "project_462000462"
+    # partition: str = "small-g"  # Partition (queue) name
+    timeout_min: int = 120  # 1 hours
+    # timeout_min: int = 2880  # 48 hours
+    # tasks_per_node: int = 1
+    # mem_gb: int = 64
+    # nodes: int = 1
+    # name: str = "${env_name}-${task_name}"
+    # gres: str = "gpu:1"
+    # signal_delay_s: int = 6000
+    # max_num_timeout: int = 0
+    # # additional_parameters: dict = {}
+    # array_parallelism: int = 256
+    # # constraint: "volta"
+    # stderr_to_stdout: bool = True
 
 
 cs = ConfigStore.instance()
