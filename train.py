@@ -49,7 +49,6 @@ cs.store(name="base_iqrl", group="agent", node=iQRLConfig)
 @hydra.main(version_base="1.3", config_path="./cfgs", config_name="train")
 def train(cfg: TrainConfig):
     import logging
-    import pprint
     import random
     import time
 
@@ -58,6 +57,7 @@ def train(cfg: TrainConfig):
     import torch
     from envs import make_env
     from tensordict.nn import TensorDictModule
+    from termcolor import colored
     from torchrl.data.tensor_specs import BoundedTensorSpec
     from torchrl.record.loggers.wandb import WandbLogger
     from utils import ReplayBuffer
@@ -76,12 +76,6 @@ def train(cfg: TrainConfig):
         "cuda" if torch.cuda.is_available() and (cfg.device == "cuda") else "cpu"
     )
     cfg.agent.device = cfg.device
-    logger.info(f"Using device: {cfg.device}")
-
-    cfg_dict = omegaconf.OmegaConf.to_container(
-        cfg, resolve=True, throw_on_missing=True
-    )
-    pprint.pprint(cfg_dict)
 
     ###### Initialise W&B ######
     writer = WandbLogger(
@@ -148,6 +142,19 @@ def train(cfg: TrainConfig):
         out_keys=["action"],
     )
 
+    ##### Print information about run #####
+    task = cfg.env_name if cfg.task_name == "" else cfg.env_name + "-" + cfg.task_name
+    steps = (cfg.num_episodes * cfg.max_episode_steps * cfg.action_repeat) / 1e6
+    total_params = int(agent.total_params / 1e6)
+    writer.log_hparams({"total_params": agent.total_params})
+    print(colored("Task:", "yellow", attrs=["bold"]), task)
+    print(colored("Number of episodes:", "yellow", attrs=["bold"]), cfg.num_episodes)
+    print(colored("Max number of env. steps:", "yellow", attrs=["bold"]), steps, "M")
+    print(colored("Action repeat:", "green", attrs=["bold"]), cfg.action_repeat)
+    print(colored("Device:", "green", attrs=["bold"]), cfg.device)
+    print(colored("Learnable parameters:", "green", attrs=["bold"]), f"{total_params}M")
+    print(colored("Architecture:", "green", attrs=["bold"]), agent)
+
     step = 0
     start_time = time.time()
     for episode_idx in range(cfg.num_episodes):
@@ -156,7 +163,7 @@ def train(cfg: TrainConfig):
         with torch.no_grad():
             data = env.rollout(max_steps=cfg.max_episode_steps, policy=policy_module)
         if episode_idx == 0:
-            print(f"data {data}")
+            print(colored("First episodes data:", "green", attrs=["bold"]), data)
 
         ##### Add data to the replay buffer #####
         rb.extend(data)

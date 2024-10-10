@@ -645,3 +645,7 @@ class iQRL(Agent):
         # metrics.update(h.calc_dormant_neuron_ratio(batch, agent=self))
 
         return metrics
+
+    @property
+    def total_params(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
