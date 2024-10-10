@@ -24,6 +24,8 @@ def train(cfg: TrainConfig):
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
 
+    assert cfg.agent.obs_types == ["state"], "only  obs_types == ['state'] is supported"
+
     ###### Fix seed for reproducibility ######
     random.seed(cfg.seed)
     np.random.seed(cfg.seed)
