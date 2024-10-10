@@ -70,7 +70,6 @@ def train(cfg: TrainConfig):
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
     torch.backends.cudnn.deterministic = True
-    # torch.backends.cudnn.benchmark = False
 
     cfg.device = (
         "cuda" if torch.cuda.is_available() and (cfg.device == "cuda") else "cpu"
