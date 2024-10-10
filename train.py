@@ -5,8 +5,7 @@ import hydra
 from configs import TrainConfig
 
 
-# @hydra.main(version_base="1.3", config_path="./cfgs", config_name="train")
-@hydra.main(version_base="1.3", config_name="train")
+@hydra.main(version_base="1.3", config_path="./cfgs", config_name="train")
 def train(cfg: TrainConfig):
     import logging
     import random
