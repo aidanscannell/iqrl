@@ -1,20 +1,8 @@
 #!/usr/bin/env python3
 from typing import Optional
 
-from torchrl.envs import DMControlEnv, GymEnv, StepCounter, TransformedEnv
-from torchrl.envs.transforms import (
-    CatFrames,
-    CatTensors,
-    Compose,
-    DoubleToFloat,
-    RenameTransform,
-    Resize,
-    RewardSum,
-    ToTensorImage,
-    TransformedEnv,
-)
-from torchrl.record import VideoRecorder
-from torchrl.record.loggers.csv import CSVLogger
+from torchrl.envs import DMControlEnv, TransformedEnv
+from torchrl.envs.transforms import CatTensors, TransformedEnv
 
 
 def make_env(
