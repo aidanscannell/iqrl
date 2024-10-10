@@ -5,15 +5,13 @@ import math
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
-import helper as h
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import utils
+import utils.helper as h
 import wandb
-from custom_types import Agent, EvalMode
-from helper import soft_update_params
 from tensordict import TensorDict
 from torchrl.data import BoundedTensorSpec, CompositeSpec
 from utils import ReplayBuffer, ReplayBufferSamples
@@ -397,7 +395,7 @@ class Encoder(nn.Module):
             self._proj.eval()
 
 
-class iQRL(Agent):
+class iQRL(nn.Module):
     def __init__(
         self, cfg: iQRLConfig, obs_spec: CompositeSpec, act_spec: BoundedTensorSpec
     ):
@@ -526,11 +524,11 @@ class iQRL(Agent):
         self.enc_opt.step()
 
         # Update the tar network
-        soft_update_params(
+        h.soft_update_params(
             self.encoder._encoder, self.encoder._encoder_tar, tau=self.cfg.enc_tau
         )
         if self.cfg.use_latent_projection:
-            soft_update_params(
+            h.soft_update_params(
                 self.encoder._proj, self.encoder._proj_tar, tau=self.cfg.enc_tau
             )
 
@@ -574,7 +572,7 @@ class iQRL(Agent):
         self.q_opt.step()
 
         ##### Update the target network #####
-        soft_update_params(self.Q, self.Q_tar, tau=self.cfg.tau)
+        h.soft_update_params(self.Q, self.Q_tar, tau=self.cfg.tau)
 
         self.Q.eval()
         return {
@@ -599,7 +597,7 @@ class iQRL(Agent):
         self.pi_opt.step()
 
         ##### Update the target network #####
-        soft_update_params(self._pi, self._pi_tar, tau=self.cfg.tau)
+        h.soft_update_params(self._pi, self._pi_tar, tau=self.cfg.tau)
 
         self._pi.eval()
         return {
@@ -608,7 +606,7 @@ class iQRL(Agent):
         }
 
     @torch.no_grad()
-    def select_action(self, obs, eval_mode: EvalMode = False):
+    def select_action(self, obs, eval_mode: bool = False):
         is_flat_obs = False
         if obs.batch_size == torch.Size([]):
             obs = obs.view(1)
