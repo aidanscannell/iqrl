@@ -41,7 +41,6 @@ def make_env(
         obs_keys = [key for key in env.observation_spec.keys()]
         if from_pixels or record_video:
             obs_keys.remove("pixels")
-        print(f"Putting obs_keys: {obs_keys} into 'state'")
         env = TransformedEnv(env, CatTensors(in_keys=obs_keys, out_key="observation"))
 
         # env = TransformedEnv(
