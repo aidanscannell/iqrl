@@ -4,8 +4,8 @@ from functools import partial
 from typing import Optional
 
 import hydra
-from agents.iqrl import iQRLConfig
 from hydra.core.config_store import ConfigStore
+from iqrl import iQRLConfig
 
 
 @dataclass
@@ -51,10 +51,10 @@ def train(cfg: TrainConfig):
     import random
     import time
 
-    import agents
     import numpy as np
     import torch
     from envs import make_env
+    from iqrl import iQRL
     from tensordict.nn import TensorDictModule
     from termcolor import colored
     from torchrl.data.tensor_specs import BoundedTensorSpec
@@ -118,7 +118,7 @@ def train(cfg: TrainConfig):
     )
 
     ###### Init agent ######
-    agent = agents.iQRL(
+    agent = iQRL(
         cfg=cfg.agent,
         obs_spec=env.observation_spec["observation"],
         act_spec=env.action_spec,
