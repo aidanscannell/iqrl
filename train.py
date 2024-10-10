@@ -1,8 +1,104 @@
 #!/usr/bin/env python3
+from dataclasses import dataclass, field
 from functools import partial
+from typing import Any, Dict, List, Optional
 
 import hydra
-from configs import TrainConfig
+from hydra.core.config_store import ConfigStore
+from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf
+from iqrl import iQRLConfig
+from omegaconf import MISSING
+
+
+@dataclass
+class TrainConfig:
+    """Training config used in train.py"""
+
+    defaults: List[Any] = field(
+        default_factory=lambda: [
+            "_self_",
+            {"agent": "iqrl"},
+            {"env": "dog-run"},  # envs are specified in cfgs/env/
+            # Use submitit to launch slurm jobs on cluster w/ multirun
+            {"override hydra/launcher": "slurm"},
+            {"override hydra/job_logging": "colorlog"},  # Make logging colourful
+            {"override hydra/hydra_logging": "colorlog"},  # Make logging colourful
+        ]
+    )
+
+    # Configure environment (overridden by defaults list)
+    env_name: str = MISSING
+    task_name: str = MISSING
+
+    # Agent (overridden by defaults list)
+    agent: iQRLConfig = field(default_factory=iQRLConfig)
+
+    # Experiment
+    max_episode_steps: int = 1000  # Max episode length
+    num_episodes: int = 500  # Number of training episodes
+    random_episodes: int = 10  # Number of random episodes at start
+    action_repeat: int = 2
+    buffer_size: int = 10_000_000
+    prefetch: int = 5
+    seed: int = 42
+    checkpoint: Optional[str] = None  # /file/path/to/checkpoint
+    device: str = "cuda"  # "cpu" or "cuda" etc
+    verbose: bool = False  # if true print training progress
+
+    # Evaluation
+    eval_every_episodes: int = 20
+    num_eval_episodes: int = 10
+    capture_eval_video: bool = False  # Fails on AMD GPU so set to False
+    capture_train_video: bool = False
+    log_dormant_neuron_ratio: bool = False
+
+    # W&B config
+    use_wandb: bool = False
+    wandb_project_name: str = "iqrl"
+    run_name: str = "iqrl-${now:%Y-%m-%d_%H-%M-%S}"
+
+    # Override the Hydra config to get better dir structure with W&B
+    hydra: Any = field(
+        default_factory=lambda: {
+            "run": {"dir": "output/hydra/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}"},
+            "verbose": False,
+            "job": {"chdir": True},
+            "sweep": {"dir": "${hydra.run.dir}", "subdir": "${hydra.job.num}"},
+        }
+    )
+
+
+@dataclass
+class SlurmConfig(SlurmQueueConf):
+    """
+    See here for config options
+    https://github.com/facebookresearch/hydra/blob/main/plugins/hydra_submitit_launcher/hydra_plugins/hydra_submitit_launcher/config.py
+    """
+
+    timeout_min: int = 1440  # 24 hours
+    mem_gb: int = 32
+    name: str = "${env_name}-${task_name}"
+    gres: str = "gpu:1"
+    stderr_to_stdout: bool = True
+
+
+@dataclass
+class LUMIConfig(SlurmConfig):
+    """
+    See here for config options
+    https://github.com/facebookresearch/hydra/blob/main/plugins/hydra_submitit_launcher/hydra_plugins/hydra_submitit_launcher/config.py
+    """
+
+    account: str = "project_462000623"
+    partition: str = "small-g"  # Partition (queue) name
+    timeout_min: int = 1440  # 24 hours
+
+
+cs = ConfigStore.instance()
+cs.store(name="train", node=TrainConfig)
+cs.store(name="iqrl", group="agent", node=iQRLConfig)
+cs.store(name="slurm", group="hydra/launcher", node=SlurmConfig)
+cs.store(name="lumi", group="hydra/launcher", node=LUMIConfig)
 
 
 @hydra.main(version_base="1.3", config_path="./cfgs", config_name="train")
