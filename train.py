@@ -79,7 +79,7 @@ cs.store(name="lumi", group="hydra/launcher", node=LUMIConfig)
 def cluster_safe_train(cfg: TrainConfig):
     """Wrapper to ensure errors are logged properly when using hydra's submitit launcher
 
-    This wrapper function is used to circumvent a bug in Hydra
+    This wrapper function is used to circumvent this bug in Hydra
     See https://github.com/facebookresearch/hydra/issues/2664
     """
     import sys
