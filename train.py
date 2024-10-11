@@ -76,6 +76,26 @@ cs.store(name="lumi", group="hydra/launcher", node=LUMIConfig)
 
 
 @hydra.main(version_base="1.3", config_path="./cfgs", config_name="train")
+def cluster_safe_train(cfg: TrainConfig):
+    """Wrapper to ensure errors are logged properly when using hydra's submitit launcher
+
+    This wrapper function is used to circumvent a bug in Hydra
+    See https://github.com/facebookresearch/hydra/issues/2664
+    """
+    import sys
+    import traceback
+
+    try:
+        train.train(cfg)
+    except BaseException:
+        traceback.print_exc(file=sys.stderr)
+        raise
+    finally:
+        # fflush everything
+        sys.stdout.flush()
+        sys.stderr.flush()
+
+
 def train(cfg: TrainConfig):
     import logging
     import random
@@ -305,4 +325,4 @@ def train(cfg: TrainConfig):
 
 
 if __name__ == "__main__":
-    train()  # pyright: ignore
+    cluster_safe_train()  # pyright: ignore
