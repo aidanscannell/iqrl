@@ -40,3 +40,25 @@ If you want to run the job for longer (e.g 48hrs), you can use the following
 ``` sh
 python train.py -m +env=walker-walk ++use_wandb=True ++agent.batch_size=256,512 ++agent.lr=1e-4,1e-4 ++hydra.launcher.timeout_min=2880
 ```
+
+# BibTeX
+Please consider citing our arXiv paper:
+``` bibtex
+@misc{scannell2024iqrl,
+  title           = {iQRL - Implicitly Quantized Representations for Sample-efficient Reinforcement Learning},
+  author          = {Aidan Scannell and Kalle Kujanpää and Yi Zhao and Mohammadreza Nakhaei and Arno Solin and Joni Pajarinen},
+  year            = {2024},
+  eprint          = {2406.02696},
+  archivePrefix   = {arXiv},
+  primaryClass    = {cs.LG}
+}
+```
+and our workshop paper:
+``` bibtex
+@inproceedings{scannellQuantized2024,
+  title           = {Quantized Representations Prevent Dimensional Collapse in Self-predictive {RL}},
+  booktitle       = {ICML Workshop on Aligning Reinforcement Learning Experimentalists and Theorists ({ARLET})},
+  author          = {Aidan Scannell and Kalle Kujanpää and Yi Zhao and Mohammadreza Nakhaei and Arno Solin and Joni Pajarinen},
+  year            = {2024},
+}
+```
