@@ -24,6 +24,7 @@ python train.py +env=walker-walk ++use_wandb=True
 ```
 All tested tasks are listed in`cfgs/env`.
 
+### Configuring experiments
 This repo uses hydra for configuration.
 You can easily try new hyperparameters for `iQRL` with something like
 ``` sh
