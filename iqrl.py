@@ -321,8 +321,8 @@ class Encoder(nn.Module):
 
         ##### (Optional) Project latent before consistency loss #####
         if self.cfg.use_latent_projection:
-            zs_tar = self.projection_tar(zs_tar)
-            zs = self.projection(zs)
+            zs_tar = self.project(zs_tar, tar=True)
+            zs = self.project(zs, tar=False)
 
         ##### Temporal consistency loss #####
         if self.cfg.use_tc_loss:
