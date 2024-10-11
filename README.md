@@ -1,4 +1,4 @@
-# iQRL: implicitly Quantized Reinforcement Learning
+# iQRL: implicitly Quantized Representations for Reinforcement Learning
 
 ## Instructions
 Install dependencies:
