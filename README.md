@@ -26,11 +26,11 @@ All tested tasks are listed in`cfgs/env`.
 
 ### Configuring experiments
 This repo uses hydra for configuration.
-You can easily try new hyperparameters for `iQRL` with something like
+You can easily try new hyperparameters for `iQRL` by overriding them on the command line, for example,
 ``` sh
 python train.py +env=walker-walk ++use_wandb=True ++agent.batch_size=512
 ```
-This overrides the default value found in `iqrl.py/iQRLConfig`.
+changes the batch size to be 512 instead of default value found in `iqrl.py/iQRLConfig`.
 
 You can also use hydra to submit multiple SLURM jobs directly from the command line using
 ``` sh
