@@ -5,15 +5,13 @@ import math
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
-import helper as h
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import utils
+import utils.helper as h
 import wandb
-from custom_types import Agent, EvalMode
-from helper import soft_update_params
 from tensordict import TensorDict
 from torchrl.data import BoundedTensorSpec, CompositeSpec
 from utils import ReplayBuffer, ReplayBufferSamples
@@ -46,6 +44,7 @@ class iQRLConfig:
     nstep: int = 1  # nstep returns
     """What observation types to use? ["state"] or ["pixels"] or ["state", "pixels"]"""
     obs_types: List[str] = field(default_factory=lambda: ["state"])
+
     """ENCODER CONFIG"""
     """Size of latent space"""
     latent_dim: int = 512
@@ -79,6 +78,7 @@ class iQRLConfig:
     use_fsq: bool = True
     """FSQ levels - setting as [8,8] corresponds to a codebook of size 8*8=62=2^8"""
     fsq_levels: List[int] = field(default_factory=lambda: [8, 8])
+
     """PROJECTION HEAD"""
     """Project the latent using an MLP before calculating the temporal consistency loss?"""
     use_latent_projection: bool = False
@@ -86,6 +86,7 @@ class iQRLConfig:
     projection_mlp_dims: List[int] = field(default_factory=lambda: [256])
     """Dimension of projection - defaults to latent_dim/16"""
     proj_dim: Optional[int] = None
+
     """EXPLORATION NOISE SCHEDULE"""
     """Initial variance"""
     exploration_noise_start: float = 1.0
@@ -93,19 +94,22 @@ class iQRLConfig:
     exploration_noise_end: float = 0.1
     """Number of episodes do decay noise"""
     exploration_noise_num_steps: int = 50
+
     """POLICY SMOOTHING"""
     """Variance"""
     policy_noise: float = 0.2
     """Clip the noise"""
     noise_clip: float = 0.3
+
     """OTHER"""
     """Logging frequency"""
     logging_freq: int = 100
     """If True try to compile all NNs"""
     compile: bool = False
     """All NNs will be put on this device"""
-    device: str = "cuda"
-    name: str = "iQRL"
+    device: str = "${device}"  # set from TrainConfig
+    """Print training losses?"""
+    verbose: str = "${verbose}"  # set from TrainConfig
 
 
 class Actor(nn.Module):
@@ -317,8 +321,8 @@ class Encoder(nn.Module):
 
         ##### (Optional) Project latent before consistency loss #####
         if self.cfg.use_latent_projection:
-            zs_tar = self.projection_tar(zs_tar)
-            zs = self.projection(zs)
+            zs_tar = self.project(zs_tar, tar=True)
+            zs = self.project(zs, tar=False)
 
         ##### Temporal consistency loss #####
         if self.cfg.use_tc_loss:
@@ -351,9 +355,23 @@ class Encoder(nn.Module):
 
         # Calculate percentage of codebook that's active
         if self.cfg.use_fsq:
-            num_codes = math.prod(self.cfg.fsq_levels)
-            active_percent = z["indices"].unique().numel() / num_codes * 100
-            metrics.update({"active_percent": active_percent})
+            num_codes = torch.tensor(math.prod(self.cfg.fsq_levels), device=z.device)
+
+            def act_percent_fn(z):
+                # TODO can't vmap this because Tensor.unique() not allowed in vmap
+                return z.unique().numel() / num_codes * 100
+
+            active_percents = torch.empty(z["indices"].shape[1])
+            for i in range(z["indices"].shape[1]):
+                active_percents[i] = act_percent_fn(z["indices"][i])
+            metrics.update(
+                {
+                    # "active_percent": active_percent,
+                    "active_percent_avg": active_percents.mean(),
+                    "active_percent_min": active_percents.min(),
+                    "active_percent_max": active_percents.max(),
+                }
+            )
 
         # TODO add dormant neuron ratio stuff
         # metrics.update(h.calc_dormant_neuron_ratio(batch, agent=self))
@@ -377,13 +395,15 @@ class Encoder(nn.Module):
             self._proj.eval()
 
 
-class iQRL(Agent):
+class iQRL(nn.Module):
     def __init__(
         self, cfg: iQRLConfig, obs_spec: CompositeSpec, act_spec: BoundedTensorSpec
     ):
-        super().__init__(
-            obs_spec=obs_spec, act_spec=act_spec, device=cfg.device, name=cfg.name
-        )
+        super().__init__()
+        self.obs_spec = obs_spec
+        self.act_spec = act_spec
+        self.register_buffer("act_spec_low", act_spec.low.to(cfg.device))
+        self.register_buffer("act_spec_high", act_spec.high.to(cfg.device))
 
         if "pixels" in cfg.obs_types:
             raise NotImplementedError
@@ -442,7 +462,8 @@ class iQRL(Agent):
         num_updates = int(num_new_transitions * self.cfg.utd_ratio)
         info = {}
 
-        logger.info(f"Performing {num_updates} iQRL updates...")
+        if self.cfg.verbose:
+            logger.info(f"Performing {num_updates} iQRL updates...")
         for i in range(num_updates):
             batch = replay_buffer.sample()
 
@@ -471,9 +492,10 @@ class iQRL(Agent):
                 info.update(self.pi_update_step(batch=nstep_batch))
 
             if i % self.cfg.logging_freq == 0:
-                logger.info(
-                    f"Iteration {i} | loss {info['enc_loss']:.3} | tc loss {info['tc_loss']:.3} | reward loss {info['reward_loss']:.3}"
-                )
+                if self.cfg.verbose:
+                    logger.info(
+                        f"Iteration {i} | loss {info['enc_loss']:.3} | tc loss {info['tc_loss']:.3} | reward loss {info['reward_loss']:.3}"
+                    )
                 if wandb.run is not None:
                     wandb.log(info)
 
@@ -483,10 +505,10 @@ class iQRL(Agent):
 
         self._exploration_noise_schedule.step()
 
-        logger.info("Finished training iQRL")
+        if self.cfg.verbose:
+            logger.info("Finished training iQRL")
         return info
 
-    # @torch.compile
     def representation_update_step(self, batch: ReplayBufferSamples):
         self.encoder.train()
         loss, info = self.encoder.loss(batch=batch)
@@ -504,11 +526,11 @@ class iQRL(Agent):
         self.enc_opt.step()
 
         # Update the tar network
-        soft_update_params(
+        h.soft_update_params(
             self.encoder._encoder, self.encoder._encoder_tar, tau=self.cfg.enc_tau
         )
         if self.cfg.use_latent_projection:
-            soft_update_params(
+            h.soft_update_params(
                 self.encoder._proj, self.encoder._proj_tar, tau=self.cfg.enc_tau
             )
 
@@ -552,7 +574,7 @@ class iQRL(Agent):
         self.q_opt.step()
 
         ##### Update the target network #####
-        soft_update_params(self.Q, self.Q_tar, tau=self.cfg.tau)
+        h.soft_update_params(self.Q, self.Q_tar, tau=self.cfg.tau)
 
         self.Q.eval()
         return {
@@ -577,7 +599,7 @@ class iQRL(Agent):
         self.pi_opt.step()
 
         ##### Update the target network #####
-        soft_update_params(self._pi, self._pi_tar, tau=self.cfg.tau)
+        h.soft_update_params(self._pi, self._pi_tar, tau=self.cfg.tau)
 
         self._pi.eval()
         return {
@@ -586,7 +608,7 @@ class iQRL(Agent):
         }
 
     @torch.no_grad()
-    def select_action(self, obs, eval_mode: EvalMode = False):
+    def select_action(self, obs, eval_mode: bool = False):
         is_flat_obs = False
         if obs.batch_size == torch.Size([]):
             obs = obs.view(1)
@@ -626,3 +648,7 @@ class iQRL(Agent):
         # metrics.update(h.calc_dormant_neuron_ratio(batch, agent=self))
 
         return metrics
+
+    @property
+    def total_params(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)

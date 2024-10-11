@@ -3,11 +3,9 @@ from typing import Optional
 
 import gymnasium as gym
 from dm_control import suite
-from metaworld.envs import ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
-from torchrl.envs import DMControlEnv, GymEnv, StepCounter, TransformedEnv
+from torchrl.envs import GymEnv, StepCounter, TransformedEnv
 from torchrl.envs.transforms import (
     CatFrames,
-    CatTensors,
     Compose,
     DoubleToFloat,
     RenameTransform,
@@ -20,7 +18,6 @@ from torchrl.record import VideoRecorder
 from torchrl.record.loggers.csv import CSVLogger
 
 from .dmcontrol import make_env as dmcontrol_make_env
-from .metaworld import make_env as metaworld_make_env
 
 
 def make_env(
@@ -52,18 +49,6 @@ def make_env(
             env_name=env_name,
             task_name=task_name,
             from_pixels=from_pixels or record_video,
-            frame_skip=frame_skip,
-            pixels_only=pixels_only,
-            device=device,
-        )
-    elif (
-        env_name.split("-", 1)[-1] + "-v2-goal-observable"
-        in ALL_V2_ENVIRONMENTS_GOAL_OBSERVABLE
-    ):
-        env = metaworld_make_env(
-            env_name=env_name.split("-", 1)[-1] + "-v2-goal-observable",
-            from_pixels=from_pixels or record_video,
-            seed=seed,
             frame_skip=frame_skip,
             pixels_only=pixels_only,
             device=device,

@@ -1,7 +1,0 @@
-# @package _global_
-defaults:
-  - easy
-  - _self_
-
-env_name: "InvertedPendulum-v4"
-task_name: null

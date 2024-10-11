@@ -21,6 +21,7 @@ dependencies:
   - imageio-ffmpeg # needed for rendering
   - ffmpeg # needed for rendering
   - moviepy  # For VideoRecorder in utils/video.py
+  - termcolor
   # For mujoco
   - glew
   - mesalib

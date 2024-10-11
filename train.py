@@ -1,30 +1,41 @@
 #!/usr/bin/env python3
-import os
 from dataclasses import dataclass, field
 from functools import partial
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import hydra
-import omegaconf
-from agents.iqrl import iQRLConfig
 from hydra.core.config_store import ConfigStore
+from hydra_plugins.hydra_submitit_launcher.config import SlurmQueueConf
+from iqrl import iQRLConfig
+from omegaconf import MISSING
 
 
 @dataclass
 class TrainConfig:
-    env_name: str = "dog"
-    task_name: str = "run"
+    """Training config used in train.py"""
 
+    defaults: List[Any] = field(
+        default_factory=lambda: [
+            "_self_",
+            {"agent": "iqrl"},
+            {"env": "dog-run"},  # envs are specified in cfgs/env/
+            # Use submitit to launch slurm jobs on cluster w/ multirun
+            {"override hydra/launcher": "slurm"},
+            {"override hydra/job_logging": "colorlog"},  # Make logging colourful
+            {"override hydra/hydra_logging": "colorlog"},  # Make logging colourful
+        ]
+    )
+
+    # Configure environment (overridden by defaults list)
+    env_name: str = MISSING
+    task_name: str = MISSING
+
+    # Agent (overridden by defaults list)
     agent: iQRLConfig = field(default_factory=iQRLConfig)
 
-    # Observation stuff
-    from_pixels: bool = False
-    pixels_only: bool = False
-    num_frames_to_stack: int = 3  # only used for pixel observations
-
     # Experiment
-    max_episode_steps: int = 500  # Max episode length (1000 steps as action_repeat=2)
-    num_episodes: int = 500  # Number of training episodes
+    max_episode_steps: int = 1000  # Max episode length
+    num_episodes: int = 3000  # Number of training episodes (3M env steps)
     random_episodes: int = 10  # Number of random episodes at start
     action_repeat: int = 2
     buffer_size: int = 10_000_000
@@ -32,84 +43,103 @@ class TrainConfig:
     seed: int = 42
     checkpoint: Optional[str] = None  # /file/path/to/checkpoint
     device: str = "cuda"  # "cpu" or "cuda" etc
+    verbose: bool = False  # if true print training progress
 
     # Evaluation
-    eval_every_episodes: int = 10
+    eval_every_episodes: int = 20
     num_eval_episodes: int = 10
-    capture_eval_video: bool = True  # Fails on AMD GPU so set to False
+    capture_eval_video: bool = False  # Fails on AMD GPU so set to False
     capture_train_video: bool = False
     log_dormant_neuron_ratio: bool = False
 
     # W&B config
     use_wandb: bool = False
-    wandb_project_name: str = "iQRL"
-    run_name: str = f"TD3"
+    wandb_project_name: str = "iqrl"
+    run_name: str = "iqrl-${now:%Y-%m-%d_%H-%M-%S}"
+
+    # Override the Hydra config to get better dir structure with W&B
+    hydra: Any = field(
+        default_factory=lambda: {
+            "run": {"dir": "output/hydra/${hydra.job.name}/${now:%Y-%m-%d_%H-%M-%S}"},
+            "verbose": False,
+            "job": {"chdir": True},
+            "sweep": {"dir": "${hydra.run.dir}", "subdir": "${hydra.job.num}"},
+        }
+    )
+
+
+@dataclass
+class SlurmConfig(SlurmQueueConf):
+    """
+    See here for config options
+    https://github.com/facebookresearch/hydra/blob/main/plugins/hydra_submitit_launcher/hydra_plugins/hydra_submitit_launcher/config.py
+    """
+
+    timeout_min: int = 1440  # 24 hours
+    mem_gb: int = 32
+    name: str = "${env_name}-${task_name}"
+    gres: str = "gpu:1"
+    stderr_to_stdout: bool = True
+
+
+@dataclass
+class LUMIConfig(SlurmConfig):
+    """
+    See here for config options
+    https://github.com/facebookresearch/hydra/blob/main/plugins/hydra_submitit_launcher/hydra_plugins/hydra_submitit_launcher/config.py
+    """
+
+    account: str = "project_462000623"
+    partition: str = "small-g"  # Partition (queue) name
+    timeout_min: int = 1440  # 24 hours
 
 
 cs = ConfigStore.instance()
-cs.store(name="base_train_config", node=TrainConfig)
-cs.store(name="base_iqrl", group="agent", node=iQRLConfig)
+cs.store(name="train", node=TrainConfig)
+cs.store(name="iqrl", group="agent", node=iQRLConfig)
+cs.store(name="slurm", group="hydra/launcher", node=SlurmConfig)
+cs.store(name="lumi", group="hydra/launcher", node=LUMIConfig)
 
 
 @hydra.main(version_base="1.3", config_path="./cfgs", config_name="train")
 def train(cfg: TrainConfig):
     import logging
-    import math
-    import pprint
     import random
     import time
 
-    import torch
-
-    # This is needed to render videos on GPU
-    if torch.cuda.is_available() and (cfg.device == "cuda"):
-        os.environ["MUJOCO_GL"] = "osmesa"
-        os.environ["PYOPENGL_PLATFORM"] = "osmesa"
-
-    import agents
-    import helper as h
     import numpy as np
+    import torch
     from envs import make_env
+    from iqrl import iQRL
     from tensordict.nn import TensorDictModule
+    from termcolor import colored
     from torchrl.data.tensor_specs import BoundedTensorSpec
-    from torchrl.record.loggers.csv import CSVLogger
     from torchrl.record.loggers.wandb import WandbLogger
     from utils import ReplayBuffer
 
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
 
+    assert cfg.agent.obs_types == ["state"], "only obs_types=['state'] is supported"
+
     ###### Fix seed for reproducibility ######
     random.seed(cfg.seed)
     np.random.seed(cfg.seed)
     torch.manual_seed(cfg.seed)
     torch.backends.cudnn.deterministic = True
-    # torch.backends.cudnn.benchmark = False
 
     cfg.device = (
         "cuda" if torch.cuda.is_available() and (cfg.device == "cuda") else "cpu"
     )
-    cfg.agent.device = cfg.device
-    logger.info(f"Using device: {cfg.device}")
-
-    cfg_dict = omegaconf.OmegaConf.to_container(
-        cfg, resolve=True, throw_on_missing=True
-    )
-    pprint.pprint(cfg_dict)
 
     ###### Initialise W&B ######
     writer = WandbLogger(
         exp_name=cfg.run_name,
         offline=not cfg.use_wandb,
         project=cfg.wandb_project_name,
-        # log_dir="./logs",
         group=f"{cfg.env_name}-{cfg.task_name}",
         tags=[f"{cfg.env_name}-{cfg.task_name}", f"seed={str(cfg.seed)}"],
-        # config=cfg_dict,
-        #     monitor_gym=cfg.monitor_gym,
         save_code=True,
-        # dir=os.path.join(get_original_cwd(), "output"),
-        # dir="./logs",
     )
     writer.log_hparams(cfg)
 
@@ -120,11 +150,9 @@ def train(cfg: TrainConfig):
         task_name=cfg.task_name,
         seed=cfg.seed,
         frame_skip=cfg.action_repeat,
-        num_frames_to_stack=cfg.num_frames_to_stack,
-        from_pixels=cfg.from_pixels,
-        pixels_only=cfg.pixels_only,
+        from_pixels=False,
+        pixels_only=False,
         device=cfg.device,
-        # max_episode_steps=cfg.max_episode_steps,
     )
     env = make_env_fn(record_video=False)
     eval_env = make_env_fn(record_video=False)
@@ -147,7 +175,7 @@ def train(cfg: TrainConfig):
     )
 
     ###### Init agent ######
-    agent = agents.iQRL(
+    agent = iQRL(
         cfg=cfg.agent,
         obs_spec=env.observation_spec["observation"],
         act_spec=env.action_spec,
@@ -169,31 +197,108 @@ def train(cfg: TrainConfig):
         out_keys=["action"],
     )
 
-    env_step = 0
+    ##### Print information about run #####
+    task = cfg.env_name if cfg.task_name == "" else cfg.env_name + "-" + cfg.task_name
+    steps = (cfg.num_episodes * cfg.max_episode_steps) / 1e6
+    total_params = int(agent.total_params / 1e6)
+    writer.log_hparams({"total_params": agent.total_params})
+    print(colored("Task:", "yellow", attrs=["bold"]), task)
+    print(colored("Number of episodes:", "yellow", attrs=["bold"]), cfg.num_episodes)
+    print(colored("Max number of env. steps:", "yellow", attrs=["bold"]), steps, "M")
+    print(colored("Action repeat:", "green", attrs=["bold"]), cfg.action_repeat)
+    print(colored("Device:", "green", attrs=["bold"]), cfg.device)
+    print(colored("Learnable parameters:", "green", attrs=["bold"]), f"{total_params}M")
+    print(colored("Architecture:", "green", attrs=["bold"]), agent)
+
+    def evaluate(step: int) -> dict:
+        """Evaluate agent in eval_env and log metrics"""
+        eval_metrics = {}
+        eval_start_time = time.time()
+        with torch.no_grad():
+            episodic_returns, episodic_successes = [], []
+            for _ in range(cfg.num_eval_episodes):
+                eval_data = eval_env.rollout(
+                    max_steps=cfg.max_episode_steps // cfg.action_repeat,
+                    policy=eval_policy_module,
+                )
+                episodic_returns.append(
+                    eval_data["next"]["episode_reward"][-1].cpu().item()
+                )
+                success = eval_data["next"].get("success", None)
+                if success is not None:
+                    episodic_successes.append(success.any())
+
+            eval_episodic_return = sum(episodic_returns) / cfg.num_eval_episodes
+
+            if success is not None:
+                # TODO is episodic_successes being calculated correctly
+                episodic_success = sum(episodic_successes) / cfg.num_eval_episodes
+                eval_metrics.update({"episodic_success": episodic_success})
+
+        ##### Eval metrics #####
+        eval_metrics.update(
+            {
+                "episodic_return": eval_episodic_return,
+                "elapsed_time": time.time() - start_time,
+                "SPS": int(step / (time.time() - start_time)),
+                "episode_time": (time.time() - eval_start_time) / cfg.num_eval_episodes,
+                "env_step": step * cfg.action_repeat,
+                "step": step,
+                "episode": episode_idx,
+            }
+        )
+        if cfg.verbose:
+            logger.info(
+                f"Episode {episode_idx} | Env Step {step*cfg.action_repeat} | Eval return {eval_episodic_return:.2f}"
+            )
+
+        with torch.no_grad():
+            if cfg.capture_eval_video:
+                video_env.rollout(
+                    max_steps=cfg.max_episode_steps // cfg.action_repeat,
+                    policy=eval_policy_module,
+                )
+                video_env.transform.dump()
+
+        ##### Log rank of latent and active codebook percent #####
+        batch = rb.sample(batch_size=agent.encoder.cfg.latent_dim)
+        eval_metrics.update(agent.metrics(batch))
+
+        ##### Log metrics to W&B or csv #####
+        writer.log_scalar(name="eval/", value=eval_metrics)
+        return eval_metrics
+
+    step = 0
     start_time = time.time()
     for episode_idx in range(cfg.num_episodes):
         episode_start_time = time.time()
         ##### Rollout the policy in the environment #####
         with torch.no_grad():
-            data = env.rollout(max_steps=cfg.max_episode_steps, policy=policy_module)
-        if episode_idx == 0:
-            print(f"data {data}")
-
+            data = env.rollout(
+                max_steps=cfg.max_episode_steps // cfg.action_repeat,
+                policy=policy_module,
+            )
         ##### Add data to the replay buffer #####
         rb.extend(data)
 
+        if episode_idx == 0:
+            print(colored("First episodes data:", "green", attrs=["bold"]), data)
+
+            # Evaluate the initial agent
+            _ = evaluate(step=step)
+
         ##### Log episode metrics #####
         num_new_transitions = data["next"]["step_count"][-1].cpu().item()
-        env_step += num_new_transitions
+        step += num_new_transitions
         episode_reward = data["next"]["episode_reward"][-1].cpu().item()
-        logger.info(
-            f"Train | Return {episode_reward:.2f} | Env Step {env_step} | Episode {episode_idx}"
-        )
+        if cfg.verbose:
+            logger.info(
+                f"Episode {episode_idx} | Env Step {step*cfg.action_repeat} | Train return {episode_reward:.2f}"
+            )
         rollout_metrics = {
             "episodic_return": episode_reward,
-            "episodic_return": episode_reward,
             "episodic_length": num_new_transitions,
-            "env_step": env_step,
+            "env_step": step * cfg.action_repeat,
         }
         success = data["next"].get("success", None)
         if success is not None:
@@ -204,13 +309,9 @@ def train(cfg: TrainConfig):
 
         ##### Train agent (after collecting some random episodes) #####
         if episode_idx > cfg.random_episodes - 1:
-            logger.info(
-                f"Training agent w. {num_new_transitions} new data @ step {env_step}..."
-            )
             train_metrics = agent.update(
                 replay_buffer=rb, num_new_transitions=num_new_transitions
             )
-            logger.info("Finished training agent.")
 
             ##### Log training metrics #####
             writer.log_scalar(name="train/", value=train_metrics)
@@ -220,62 +321,13 @@ def train(cfg: TrainConfig):
 
             ###### Evaluate ######
             if episode_idx % cfg.eval_every_episodes == 0:
-                ##### Calculate avg. episodic return (optionally avg. success) #####
-                eval_metrics = {}
-                with torch.no_grad():
-                    episodic_returns, episodic_successes = [], []
-                    for idx in range(cfg.num_eval_episodes):
-                        print(f"Eval episode {idx}")
-                        eval_data = eval_env.rollout(
-                            max_steps=cfg.max_episode_steps, policy=eval_policy_module
-                        )
-                        episodic_returns.append(
-                            eval_data["next"]["episode_reward"][-1].cpu().item()
-                        )
-                        success = eval_data["next"].get("success", None)
-                        if success is not None:
-                            episodic_successes.append(success.any())
-
-                    episodic_return = sum(episodic_returns) / cfg.num_eval_episodes
-
-                    if success is not None:
-                        # TODO is episodic_successes being calculated correctly
-                        episodic_success = (
-                            sum(episodic_successes) / cfg.num_eval_episodes
-                        )
-                        eval_metrics.update({"episodic_success": episodic_success})
-                    if cfg.capture_eval_video:
-                        video_env.rollout(
-                            max_steps=cfg.max_episode_steps, policy=eval_policy_module
-                        )
-                        video_env.transform.dump()
-
-                ##### Eval metrics #####
-                eval_metrics.update(
-                    {
-                        "episodic_return": episodic_return,
-                        "elapsed_time": time.time() - start_time,
-                        "SPS": int(env_step / (time.time() - start_time)),
-                        "episode_time": time.time() - episode_start_time,
-                        "env_step": env_step,
-                        "episode": episode_idx,
-                    }
-                )
-                logger.info(
-                    f"Eval | Return {episode_reward:.2f} | Env step {env_step} | Episode {episode_idx} | SPS {eval_metrics['SPS']}"
-                )
-
-                ##### Log rank of latent and active codebook percent #####
-                batch = rb.sample()
-                eval_metrics.update(agent.metrics(batch))
-
-                ##### Log metrics to W&B or csv #####
-                writer.log_scalar(name="eval/", value=eval_metrics)
+                evaluate(step=step)
 
         # Release some GPU memory (if possible)
         torch.cuda.empty_cache()
 
     env.close()
+    eval_env.close()
 
 
 if __name__ == "__main__":

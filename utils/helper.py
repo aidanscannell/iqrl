@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import copy
 from typing import List, Optional
 
 import numpy as np
@@ -6,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import utils
-from functorch import combine_state_for_ensemble
+from torch.func import functional_call, stack_module_state
 from torch.linalg import cond, matrix_rank
 
 # from utils.batch_renorm import BatchRenorm1d
@@ -147,24 +148,35 @@ class NormedLinear(nn.Linear):
 
 
 class Ensemble(nn.Module):
-    """
-    Vectorized ensemble of modules.
-
-    Adapted from https://github.com/nicklashansen/tdmpc2/blob/main/tdmpc2/common/layers.py
-    """
+    """Vectorized ensemble of modules"""
 
     def __init__(self, modules, **kwargs):
         super().__init__()
-        modules = nn.ModuleList(modules)
-        fn, params, _ = combine_state_for_ensemble(modules)
+
+        self.params_dict, self._buffers = stack_module_state(modules)
+        self.params = nn.ParameterList([p for p in self.params_dict.values()])
+
+        # Construct a "stateless" version of one of the models. It is "stateless" in
+        # the sense that the parameters are meta Tensors and do not have storage.
+        base_model = copy.deepcopy(modules[0])
+        base_model = base_model.to("meta")
+
+        def fmodel(params, buffers, x):
+            return functional_call(base_model, (params, buffers), (x,))
+
         self.vmap = torch.vmap(
-            fn, in_dims=(0, 0, None), randomness="different", **kwargs
+            fmodel, in_dims=(0, 0, None), randomness="different", **kwargs
         )
-        self.params = nn.ParameterList([nn.Parameter(p) for p in params])
         self._repr = str(modules)
 
     def forward(self, *args, **kwargs):
-        return self.vmap([p for p in self.params], (), *args, **kwargs)
+        return self.vmap(self._get_params_dict(), self._buffers, *args, **kwargs)
+
+    def _get_params_dict(self):
+        params_dict = {}
+        for key, value in zip(self.params_dict.keys(), self.params):
+            params_dict.update({key: value})
+        return params_dict
 
     def __repr__(self):
         return "Vectorized " + self._repr
@@ -207,85 +219,6 @@ class LinearSchedule:
             self.step_idx += 1
 
 
-def random_shifts_aug(x, pad: int = 4):
-    n, c, h, w = x.size()
-    assert h == w, "h and w are not equal"
-    padding = tuple([pad] * 4)
-    x = F.pad(x, padding, "replicate")
-    eps = 1.0 / (h + 2 * pad)
-    arange = torch.linspace(
-        -1.0 + eps, 1.0 - eps, h + 2 * pad, device=x.device, dtype=x.dtype
-    )[:h]
-    arange = arange.unsqueeze(0).repeat(h, 1).unsqueeze(2)
-    base_grid = torch.cat([arange, arange.transpose(1, 0)], dim=2)
-    base_grid = base_grid.unsqueeze(0).repeat(n, 1, 1, 1)
-
-    shift = torch.randint(
-        0, 2 * pad + 1, size=(n, 1, 1, 2), device=x.device, dtype=x.dtype
-    )
-    shift *= 2.0 / (h + 2 * pad)
-
-    grid = base_grid + shift
-    return F.grid_sample(x, grid, padding_mode="zeros", align_corners=False)
-
-
-class CNNEncoder(nn.Module):
-    # def __init__(self, obs_shape, hidden_dim=256, feat_dim=50, frame_diff=False):
-    def __init__(
-        self,
-        obs_shape,
-        latent_dim: int,
-        hidden_dim: int = 256,
-        frame_diff=False,
-    ):
-        super().__init__()
-
-        self.latent_dim = latent_dim
-        feat_dim = self.latent_dim
-
-        print(f"obs_shape {obs_shape}")
-        assert obs_shape == (
-            9,
-            64,
-            64,
-        ), f"obs_shape is {(obs_shape)}, but expect (9, 64, 64)"  # inputs shape
-        self.repr_dim = (32 * 8) * 2 * 2
-        if frame_diff:
-            input_channel = 9 + 2  # 2 for diff frames (in grayscale)
-        else:
-            input_channel = 9
-        self.convnet = nn.Sequential(
-            nn.Conv2d(input_channel, 32, 4, stride=2),  # [B, 32, 31, 31]
-            nn.ReLU(),
-            nn.Conv2d(32, 32 * 2, 4, stride=2),  # [B, 64, 14, 14]
-            nn.ReLU(),
-            nn.Conv2d(32 * 2, 32 * 4, 4, stride=2),  # [B, 128, 6, 6]
-            nn.ReLU(),
-            nn.Conv2d(32 * 4, 32 * 8, 4, stride=2),  # [B, 256, 2, 2]
-            nn.ReLU(),
-        )
-        self.proj = nn.Sequential(
-            nn.Linear(self.repr_dim, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ELU(),
-            nn.Linear(hidden_dim, feat_dim),
-        )
-
-        self.apply(orthogonal_init)
-
-    def forward(self, obs):
-        obs = obs - 0.5
-        # obs = obs / 255.0 - 0.5
-        shape = obs.shape
-        obs = obs.reshape([-1] + list(shape[-3:]))
-        h = self.convnet(obs)
-        h = h.view(h.shape[0], -1)
-        h = self.proj(h)
-        # reshape back
-        h = h.reshape(shape[:-3] + h.shape[-1:])
-        return h
-
-
 @torch.no_grad()
 def calc_rank(name, z):
     """Log rank of latent"""
@@ -294,8 +227,11 @@ def calc_rank(name, z):
     rank1 = matrix_rank(z, atol=1e-1, rtol=1e-1)
     condition = cond(z)
     info = {}
+    full_rank = z.shape[-1]
     for j, rank in enumerate([rank1, rank2, rank3]):
+        rank_percent = rank.item() / full_rank * 100
         info.update({f"{name}-rank-{j}": rank.item()})
+        info.update({f"{name}-rank-percent-{j}": rank_percent})
     info.update({f"{name}-cond-num": condition.item()})
     return info
 
