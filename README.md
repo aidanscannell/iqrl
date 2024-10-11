@@ -4,12 +4,16 @@ This repository is the official implementation of [iQRL](www.aidanscannell.com/i
 Learning representations for reinforcement learning (RL) has shown much promise for continuous control. We propose an efficient representation learning method using only a self-supervised latent-state consistency loss. Our approach employs an encoder and a dynamics model to map observations to latent states and predict future latent states, respectively. We achieve high performance and prevent representation collapse by quantizing the latent representation such that the rank of the representation is empirically preserved. Our method, named iQRL: implicitly Quantized Reinforcement Learning, is straightforward, compatible with any model-free RL algorithm, and demonstrates excellent performance by outperforming other recently proposed representation learning methods in continuous control benchmarks from DeepMind Control Suite.
 
 ## Instructions
+
+### Install
 Install dependencies:
 ```sh
 conda env create -f environment.yml
 conda activate iqrl
 ```
 You might need to install PyTorch with CUDA/ROCm.
+
+### Running experiments
 Train the agent:
 ``` sh
 python train.py +env=walker-walk
@@ -18,9 +22,8 @@ To log metrics with W&B:
 ``` sh
 python train.py +env=walker-walk ++use_wandb=True
 ```
-All tested tasks are listed in`cfgs/env`
+All tested tasks are listed in`cfgs/env`.
 
-## Getting the most out of hydra
 This repo uses hydra for configuration.
 You can easily try new hyperparameters for `iQRL` with something like
 ``` sh
