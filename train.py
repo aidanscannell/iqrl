@@ -35,7 +35,7 @@ class TrainConfig:
 
     # Experiment
     max_episode_steps: int = 1000  # Max episode length
-    num_episodes: int = 3000  # Number of training episodes
+    num_episodes: int = 3000  # Number of training episodes (3M env steps)
     random_episodes: int = 10  # Number of random episodes at start
     action_repeat: int = 2
     buffer_size: int = 10_000_000
@@ -120,7 +120,7 @@ def train(cfg: TrainConfig):
     logging.basicConfig(level=logging.DEBUG)
     logger = logging.getLogger(__name__)
 
-    assert cfg.agent.obs_types == ["state"], "only  obs_types == ['state'] is supported"
+    assert cfg.agent.obs_types == ["state"], "only obs_types=['state'] is supported"
 
     ###### Fix seed for reproducibility ######
     random.seed(cfg.seed)
