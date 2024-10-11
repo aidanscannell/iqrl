@@ -5,9 +5,8 @@ from typing import Any, List, Optional
 
 import hydra
 from hydra.core.config_store import ConfigStore
-from omegaconf import MISSING
-
 from iqrl import iQRLConfig
+from omegaconf import MISSING
 from utils import LUMIConfig, SlurmConfig
 
 
@@ -104,13 +103,12 @@ def train(cfg: TrainConfig):
 
     import numpy as np
     import torch
+    from envs import make_env
+    from iqrl import iQRL
     from tensordict.nn import TensorDictModule
     from termcolor import colored
     from torchrl.data.tensor_specs import BoundedTensorSpec
     from torchrl.record.loggers.wandb import WandbLogger
-
-    from envs import make_env
-    from iqrl import iQRL
     from utils import ReplayBuffer
 
     logging.basicConfig(level=logging.DEBUG)
