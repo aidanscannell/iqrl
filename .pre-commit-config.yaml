@@ -3,7 +3,6 @@ repos:
     rev: v4.3.0
     hooks:
       - id: check-yaml
-      - id: requirements-txt-fixer
       - id: trailing-whitespace
   - repo: https://github.com/psf/black
     rev: 22.10.0
@@ -13,7 +12,7 @@ repos:
     rev: 5.13.2
     hooks:
       - id: isort
-  # - repo: https://github.com/pycqa/flake8
-  #   rev: 4.0.1
-  #   hooks:
-  #     - id: flake8
+  - repo: https://github.com/pycqa/flake8
+    rev: 4.0.1
+    hooks:
+      - id: flake8
