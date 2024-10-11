@@ -8,4 +8,4 @@ task_name: "swim"
 
 agent:
   nstep: 3
-  project_latent: True
+  use_latent_projection: True
