@@ -265,7 +265,6 @@ def train(cfg: TrainConfig):
     step = 0
     start_time = time.time()
     for episode_idx in range(cfg.num_episodes):
-        episode_start_time = time.time()
         ##### Rollout the policy in the environment #####
         with torch.no_grad():
             data = env.rollout(
