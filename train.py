@@ -297,7 +297,6 @@ def train(cfg: TrainConfig):
             )
         rollout_metrics = {
             "episodic_return": episode_reward,
-            "episodic_return": episode_reward,
             "episodic_length": num_new_transitions,
             "env_step": step * cfg.action_repeat,
         }
