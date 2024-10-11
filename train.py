@@ -86,7 +86,7 @@ def cluster_safe_train(cfg: TrainConfig):
     import traceback
 
     try:
-        train.train(cfg)
+        train(cfg)
     except BaseException:
         traceback.print_exc(file=sys.stderr)
         raise
