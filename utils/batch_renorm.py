@@ -2,7 +2,6 @@
 # Copied from https://github.com/ludvb/batchrenorm/blob/master/batchrenorm/batchrenorm.py
 import torch
 
-
 __all__ = ["BatchRenorm1d", "BatchRenorm2d", "BatchRenorm3d"]
 
 
