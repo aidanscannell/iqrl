@@ -7,7 +7,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import utils
-
 from torch.func import functional_call, stack_module_state
 from torch.linalg import cond, matrix_rank
 from utils.batch_renorm import BatchRenorm1d
