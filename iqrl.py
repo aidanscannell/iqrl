@@ -111,7 +111,7 @@ class iQRLConfig:
     """All NNs will be put on this device"""
     device: str = "${device}"  # set from TrainConfig
     """Print training losses?"""
-    verbose: str = "${verbose}"  # set from TrainConfig
+    verbose: bool = "${verbose}"  # set from TrainConfig
 
 
 class Actor(nn.Module):
