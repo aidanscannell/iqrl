@@ -5,13 +5,9 @@ from typing import List, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import utils
-from functorch import combine_state_for_ensemble
 from torch.func import functional_call, stack_module_state
 from torch.linalg import cond, matrix_rank
-
-# from utils.batch_renorm import BatchRenorm1d
 from vector_quantize_pytorch import FSQ as _FSQ
 
 
@@ -149,30 +145,6 @@ class NormedLinear(nn.Linear):
 
 
 class Ensemble(nn.Module):
-    """
-    Vectorized ensemble of modules.
-
-    Adapted from https://github.com/nicklashansen/tdmpc2/blob/main/tdmpc2/common/layers.py
-    """
-
-    def __init__(self, modules, **kwargs):
-        super().__init__()
-        modules = nn.ModuleList(modules)
-        fn, params, _ = combine_state_for_ensemble(modules)
-        self.vmap = torch.vmap(
-            fn, in_dims=(0, 0, None), randomness="different", **kwargs
-        )
-        self.params = nn.ParameterList([nn.Parameter(p) for p in params])
-        self._repr = str(modules)
-
-    def forward(self, *args, **kwargs):
-        return self.vmap([p for p in self.params], (), *args, **kwargs)
-
-    def __repr__(self):
-        return "Vectorized " + self._repr
-
-
-class EnsembleNew(nn.Module):
     """Vectorized ensemble of modules"""
 
     def __init__(self, modules, **kwargs):
