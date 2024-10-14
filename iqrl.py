@@ -39,7 +39,9 @@ class iQRLConfig:
     """Target network update rate"""
     tau: float = 0.005
     """Number of critics"""
-    num_critics: int = 2
+    num_critics: int = 5
+    """Number of critics to sample"""
+    q_sample_size: int = 2
     """Use N-step returns for Q-learning?"""
     nstep: int = 1  # nstep returns
     """What observation types to use? ["state"] or ["pixels"] or ["state", "pixels"]"""
@@ -157,6 +159,12 @@ class Critic(nn.Module):
         qs = self.qs(x)
         if return_type == "all":
             return qs
+
+        # Sample two Q values
+        if self.cfg.q_sample_size is not None:
+            idxs = torch.randperm(qs.shape[0])[: self.cfg.q_sample_size]
+            qs = qs[idxs]
+
         if return_type == "min":
             return torch.min(qs, 0)[0]
         elif return_type == "avg":
@@ -562,11 +570,9 @@ class iQRL(nn.Module):
                 + (1 - batch.terminateds) * batch.next_state_gammas * min_q_next_tar
             )
 
-        q1_values, q2_values = self.Q(z=z, a=a, return_type="all")
-
-        q1_loss = F.mse_loss(q1_values[..., 0], next_q_value)
-        q2_loss = F.mse_loss(q2_values[..., 0], next_q_value)
-        q_loss = q1_loss + q2_loss
+        q_values = self.Q(z, a=a, return_type="all")[..., 0]
+        next_q_value = next_q_value.broadcast_to(q_values.shape)
+        q_loss = F.mse_loss(q_values, next_q_value)
 
         ##### Optimize critic #####
         self.q_opt.zero_grad(set_to_none=True)
@@ -577,21 +583,28 @@ class iQRL(nn.Module):
         h.soft_update_params(self.Q, self.Q_tar, tau=self.cfg.tau)
 
         self.Q.eval()
-        return {
-            "q_loss": q_loss.item() / 2,
-            "q1_loss": q1_loss.item(),
-            "q2_loss": q2_loss.item(),
-            "q1_values": q1_values.mean().item(),
-            "q2_values": q2_values.mean().item(),
+        info = {
+            "q_loss": q_loss.item(),
+            "q_mean": q_values.mean().item(),
+            "q_min": q_values.min().item(),
+            "q_max": q_values.max().item(),
+            "q_std": q_values.std().item(),
+            "q_targ_mean": next_q_value.mean().item(),
+            "q_targ_min": next_q_value.min().item(),
+            "q_targ_max": next_q_value.max().item(),
+            "q_targ_std": next_q_value.std().item(),
             "critic_update_counter": self.critic_update_counter,
         }
+        for i in range(self.cfg.num_critics):
+            info.update({f"q{i+1}_values": q_values[i].mean().item()})
+        return info
 
     def pi_update_step(self, batch: ReplayBufferSamples):
         self.pi_update_counter += 1
         self._pi.train()
 
         z = batch.z["state"]
-        pi_loss = -self.Q(z=z, a=self._pi(z), return_type="min").mean()
+        pi_loss = -self.Q(z=z, a=self._pi(z), return_type="avg").mean()
 
         ##### Optimize actor #####
         self.pi_opt.zero_grad(set_to_none=True)
