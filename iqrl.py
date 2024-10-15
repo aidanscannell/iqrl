@@ -71,7 +71,9 @@ class iQRLConfig:
     """Use LayerNorm or BatchNorm for encoder?"""
     enc_norm_type: str = "ln"
     """(Optionally) use dropout for critic"""
-    dropout: float = 0.0
+    q_dropout: float = 0.0
+    """(Optionally) use dropout for MLP encoder"""
+    enc_dropout: float = 0.0
     """Use temporal consistency loss for representation learning"""
     use_tc_loss: bool = True
     """Use reward prediction for representation learning"""
@@ -150,7 +152,7 @@ class Critic(nn.Module):
                 cfg.latent_dim + act_dim,
                 mlp_dims=cfg.mlp_dims,
                 out_dim=1,
-                dropout=cfg.dropout,
+                dropout=cfg.q_dropout,
             ).to(cfg.device)
             for _ in range(cfg.num_critics)
         ]
@@ -205,7 +207,14 @@ class Encoder(nn.Module):
         self._encoder = nn.ModuleDict()
         if "state" in cfg.obs_types:  # Encoder for state-based observations
             self._encoder.update(
-                {"state": h.mlp(obs_dim, cfg.enc_mlp_dims, cfg.latent_dim)}
+                {
+                    "state": h.mlp(
+                        obs_dim,
+                        cfg.enc_mlp_dims,
+                        cfg.latent_dim,
+                        dropout=cfg.enc_dropout,
+                    )
+                }
             )
         if "pixels" in cfg.obs_types:  # Encoder for pixel-based observations
             if self.cfg.enc_norm_type == "bn":
