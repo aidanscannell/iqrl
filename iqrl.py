@@ -70,7 +70,7 @@ class iQRLConfig:
     use_delta: bool = True
     """Use LayerNorm or BatchNorm for encoder?"""
     enc_norm_type: str = "ln"
-    """(Optionally) use dropout on all MLPs"""
+    """(Optionally) use dropout for critic"""
     dropout: float = 0.0
     """Use temporal consistency loss for representation learning"""
     use_tc_loss: bool = True
@@ -132,9 +132,7 @@ class Actor(nn.Module):
         self.action_bias = action_bias
         self.act_low = act_low
         self.act_high = act_high
-        self.mlp = h.mlp(
-            self.cfg.latent_dim, self.cfg.mlp_dims, act_dim, dropout=cfg.dropout
-        )
+        self.mlp = h.mlp(self.cfg.latent_dim, self.cfg.mlp_dims, act_dim)
 
     def forward(self, z):
         a = self.mlp(z)
@@ -207,14 +205,7 @@ class Encoder(nn.Module):
         self._encoder = nn.ModuleDict()
         if "state" in cfg.obs_types:  # Encoder for state-based observations
             self._encoder.update(
-                {
-                    "state": h.mlp(
-                        obs_dim,
-                        cfg.enc_mlp_dims,
-                        cfg.latent_dim,
-                        dropout=cfg.dropout,
-                    )
-                }
+                {"state": h.mlp(obs_dim, cfg.enc_mlp_dims, cfg.latent_dim)}
             )
         if "pixels" in cfg.obs_types:  # Encoder for pixel-based observations
             if self.cfg.enc_norm_type == "bn":
@@ -232,23 +223,17 @@ class Encoder(nn.Module):
         if cfg.use_tar_enc:
             self._encoder_tar = copy.deepcopy(self._encoder).requires_grad_(False)
 
-        self._trans = h.mlp(
-            cfg.latent_dim + act_dim, cfg.mlp_dims, cfg.latent_dim, dropout=cfg.dropout
-        )
+        self._trans = h.mlp(cfg.latent_dim + act_dim, cfg.mlp_dims, cfg.latent_dim)
 
         if cfg.use_latent_projection:
             if cfg.proj_dim is None:
                 cfg.proj_dim = int(self.cfg.latent_dim / 16)
-            self._proj = h.mlp(
-                cfg.latent_dim, cfg.mlp_dims, cfg.proj_dim, dropout=cfg.dropout
-            )
+            self._proj = h.mlp(cfg.latent_dim, cfg.mlp_dims, cfg.proj_dim)
             if cfg.use_tar_enc:
                 self._proj_tar = copy.deepcopy(self._proj).requires_grad_(False)
 
         if cfg.use_rew_loss:
-            self._reward = h.mlp(
-                cfg.latent_dim + act_dim, cfg.mlp_dims, 1, dropout=cfg.dropout
-            )
+            self._reward = h.mlp(cfg.latent_dim + act_dim, cfg.mlp_dims, 1)
 
     def encode(self, obs, tar: bool = False):
         if "pixels" in self.cfg.obs_types:
