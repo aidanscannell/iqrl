@@ -489,10 +489,8 @@ class iQRL(nn.Module):
 
             # Map observations to latent
             with torch.no_grad():
-                self.encoder.train()  # Use encoder with dropout to get latent states
                 z = self.encoder.encode(batch.observations, tar=False)
                 next_z = self.encoder.encode(batch.next_observations, tar=False)
-                self.encoder.eval()
             batch = batch._replace(z=z, next_z=next_z)
 
             ##### Make nstep returns #####
