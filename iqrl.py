@@ -556,6 +556,7 @@ class iQRL(nn.Module):
     def critic_update_step(self, batch: ReplayBufferSamples):
         self.critic_update_counter += 1
         self.Q.train()
+        self.Q_tar.train()
 
         # Check batch shapes
         assert batch.rewards.ndim == 1
@@ -591,6 +592,7 @@ class iQRL(nn.Module):
         h.soft_update_params(self.Q, self.Q_tar, tau=self.cfg.tau)
 
         self.Q.eval()
+        self.Q_tar.eval()
         info = {
             "q_loss": q_loss.item(),
             "q_mean": q_values.mean().item(),
