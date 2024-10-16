@@ -610,6 +610,7 @@ class iQRL(nn.Module):
     def pi_update_step(self, batch: ReplayBufferSamples):
         self.pi_update_counter += 1
         self._pi.train()
+        self.Q.train()  # Use dropout for actor update
 
         z = batch.z["state"]
         pi_loss = -self.Q(z=z, a=self._pi(z), return_type="avg").mean()
@@ -622,6 +623,7 @@ class iQRL(nn.Module):
         ##### Update the target network #####
         h.soft_update_params(self._pi, self._pi_tar, tau=self.cfg.tau)
 
+        self.Q.eval()
         self._pi.eval()
         return {
             "actor_loss": pi_loss.item(),
