@@ -63,7 +63,7 @@ class iQRLConfig:
     """Update encoder less frequently than actor/critic"""
     enc_update_freq: int = 1
     """Clips the gradient norm of the encoder"""
-    grad_clip_norm: Optional[int] = 20
+    grad_clip_norm: Optional[float] = 20
     """Use target encoder for representation learning"""
     use_tar_enc: bool = True
     """Predict change in latent or next latent? i.e. next_z = z + f(z, a) else next_z = f(z, a)"""
