@@ -137,7 +137,7 @@ def train(cfg: TrainConfig):
     )
     writer.log_hparams(cfg)
 
-    ###### Setup vectorized environment for training/evaluation/video recording ######
+    ###### Setup environment for training/evaluation/video recording ######
     make_env_fn = partial(
         make_env,
         env_name=cfg.env_name,
