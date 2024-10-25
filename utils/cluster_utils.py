@@ -13,6 +13,7 @@ class SlurmConfig(SlurmQueueConf):
 
     timeout_min: int = 1440  # 24 hours
     mem_gb: int = 32
+    cpus_per_task: int = 8
     name: str = "${env_name}-${task_name}"
     gres: str = "gpu:1"
     stderr_to_stdout: bool = True
