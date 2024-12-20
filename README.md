@@ -30,7 +30,7 @@ python train.py +env=walker-walk ++use_wandb=True ++agent.batch_size=512
 ```
 changes the batch size to be 512 instead of the default value found in `iqrl.py/iQRLConfig`.
 
-You can also use hydra to submit multiple SLURM jobs directly from the command line using
+You can also use hydra to submit multiple Slurm jobs directly from the command line using
 ``` sh
 python train.py -m +env=walker-walk ++use_wandb=True ++agent.batch_size=256,512 ++agent.lr=1e-4,1e-4
 ```
