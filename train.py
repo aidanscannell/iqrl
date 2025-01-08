@@ -319,6 +319,9 @@ def train(cfg: TrainConfig):
         # Release some GPU memory (if possible)
         torch.cuda.empty_cache()
 
+    # Evaluate the final agent
+    _ = evaluate(step=step)
+
     env.close()
     eval_env.close()
 
